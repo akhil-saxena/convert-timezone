@@ -9,6 +9,7 @@ let timezones = [];
 let selectedFromTimezone = null;
 let selectedToTimezone = null;
 let userTimezone = null;
+let lastConversionText = '';
 
 // DOM elements
 const elements = {
@@ -22,7 +23,11 @@ const elements = {
     toTimezoneDropdown: null,
     toTimezoneMenu: null,
     toTimezoneSearch: null,
-    toTimezoneOptions: null
+    toTimezoneOptions: null,
+    nowBtn: null,
+    swapBtn: null,
+    copyBtn: null,
+    copyBtnText: null
 };
 
 /**
@@ -39,6 +44,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Check if opened from context menu
     checkForContextMenuText();
+
+    // Smart placeholder — show current time as hint
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    elements.dateTimeInput.placeholder = `e.g., ${timeStr} (now)`;
 });
 
 /**
@@ -56,6 +66,10 @@ function initializeElements() {
     elements.toTimezoneMenu = document.getElementById('toTimezoneMenu');
     elements.toTimezoneSearch = document.getElementById('toTimezoneSearch');
     elements.toTimezoneOptions = document.getElementById('toTimezoneOptions');
+    elements.nowBtn = document.getElementById('nowBtn');
+    elements.swapBtn = document.getElementById('swapBtn');
+    elements.copyBtn = document.getElementById('copyBtn');
+    elements.copyBtnText = document.getElementById('copyBtnText');
 }
 
 /**
@@ -110,6 +124,40 @@ function setupEventListeners() {
 
     elements.toTimezoneMenu.addEventListener('click', function(e) {
         e.stopPropagation();
+    });
+
+    // Now button — fill input with current time
+    elements.nowBtn.addEventListener('click', function() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        elements.dateTimeInput.value = timeStr;
+        handleConversion();
+    });
+
+    // Swap button — swap From and To timezones
+    elements.swapBtn.addEventListener('click', function() {
+        const tempTimezone = selectedFromTimezone;
+        const tempLabel = elements.fromTimezoneDropdown.querySelector('.selected-text').textContent;
+
+        selectedFromTimezone = selectedToTimezone;
+        elements.fromTimezoneDropdown.querySelector('.selected-text').textContent =
+            elements.toTimezoneDropdown.querySelector('.selected-text').textContent;
+
+        selectedToTimezone = tempTimezone;
+        elements.toTimezoneDropdown.querySelector('.selected-text').textContent = tempLabel;
+
+        saveTimezonePreferences();
+    });
+
+    // Copy button — copy last conversion text to clipboard
+    elements.copyBtn.addEventListener('click', function() {
+        if (!lastConversionText) return;
+        navigator.clipboard.writeText(lastConversionText).then(() => {
+            elements.copyBtnText.textContent = 'Copied!';
+            setTimeout(() => {
+                elements.copyBtnText.textContent = 'Copy';
+            }, 1500);
+        });
     });
 }
 
@@ -715,6 +763,15 @@ function handleConversion() {
                 </div>
             `;
 
+            // Build plain text for copy: "2:00 PM - 3:30 PM EST → 12:30 AM - 2:00 AM IST"
+            const sourceAbbr = sourceTimezoneObj
+                ? (sourceTimezone.split('/').pop().replace(/_/g, ' '))
+                : sourceTimezone;
+            const targetAbbr = targetTimezoneObj
+                ? (targetTimezone.split('/').pop().replace(/_/g, ' '))
+                : targetTimezone;
+            lastConversionText = `${originalStartTime} - ${originalEndTime} ${sourceAbbr} \u2192 ${convertedStartTime} - ${convertedEndTime} ${targetAbbr}`;
+
             showResult(resultHtml, 'success');
         } else {
             // ---- Single time conversion ----
@@ -748,6 +805,15 @@ function handleConversion() {
                 </div>
             `;
 
+            // Build plain text for copy: "3:45:00 PM → 1:15:00 AM IST"
+            const singleSourceAbbr = sourceTimezoneObj
+                ? (sourceTimezone.split('/').pop().replace(/_/g, ' '))
+                : sourceTimezone;
+            const singleTargetAbbr = targetTimezoneObj
+                ? (targetTimezone.split('/').pop().replace(/_/g, ' '))
+                : targetTimezone;
+            lastConversionText = `${originalTime} ${singleSourceAbbr} \u2192 ${convertedTime} ${singleTargetAbbr}`;
+
             showResult(resultHtml, 'success');
         }
 
@@ -767,12 +833,39 @@ function handleConversion() {
  * Show conversion result
  */
 function showResult(html, type) {
-    elements.result.innerHTML = html;
+    // Rebuild the copy button HTML since innerHTML replaces everything
+    const copyBtnHtml = `<button class="copy-btn${type === 'success' ? ' visible' : ''}" id="copyBtn" title="Copy result">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+            <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
+        </svg>
+        <span id="copyBtnText">Copy</span>
+    </button>`;
+
+    elements.result.innerHTML = copyBtnHtml + html;
     elements.result.className = `result show`;
 
     // Add error class for error styling
     if (type === 'error') {
         elements.result.className = `result show error`;
+    }
+
+    // Re-bind copy button references and event
+    elements.copyBtn = document.getElementById('copyBtn');
+    elements.copyBtnText = document.getElementById('copyBtnText');
+    elements.copyBtn.addEventListener('click', function() {
+        if (!lastConversionText) return;
+        navigator.clipboard.writeText(lastConversionText).then(() => {
+            elements.copyBtnText.textContent = 'Copied!';
+            setTimeout(() => {
+                elements.copyBtnText.textContent = 'Copy';
+            }, 1500);
+        });
+    });
+
+    // Clear copy text for non-success states
+    if (type !== 'success') {
+        lastConversionText = '';
     }
 }
 
@@ -795,10 +888,7 @@ async function checkForContextMenuText() {
 
                 // Auto-convert if text looks like a date/time (use TimeShiftParser)
                 if (TimeShiftParser.parse(result.selectedText, { userTimezone: userTimezone }) !== null) {
-                    // Small delay to ensure UI is ready and timezone preferences are loaded
-                    setTimeout(() => {
-                        handleConversion();
-                    }, 200);
+                    handleConversion();
                 } else {
                     // Show a helpful message if it doesn't look like date/time
                     showResult(`
