@@ -247,9 +247,27 @@ function getTimezoneOffsetMinutes(ianaZone) {
 /**
  * Detect user's timezone using Intl
  */
+/**
+ * Map legacy IANA timezone names to modern equivalents in our curated list.
+ */
+const LEGACY_TIMEZONE_MAP = {
+    'Asia/Calcutta': 'Asia/Kolkata',
+    'America/Montreal': 'America/Toronto',
+    'America/Shiprock': 'America/Denver',
+    'US/Alaska': 'America/Anchorage',
+    'US/Arizona': 'America/Phoenix',
+    'US/Central': 'America/Chicago',
+    'US/Eastern': 'America/New_York',
+    'US/Hawaii': 'Pacific/Honolulu',
+    'US/Mountain': 'America/Denver',
+    'US/Pacific': 'America/Los_Angeles'
+};
+
 function detectUserTimezone() {
     try {
-        userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        let detected = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        // Map legacy IANA names to modern equivalents
+        userTimezone = LEGACY_TIMEZONE_MAP[detected] || detected;
     } catch {
         userTimezone = 'UTC';
     }
@@ -502,6 +520,24 @@ function formatDateInTimezone(utcDate, ianaZone) {
 }
 
 /**
+ * Format wall-clock components as a time string.
+ * Shows what the user originally typed, not the zone's current DST interpretation.
+ */
+function formatWallClock(wc, opts = {}) {
+    if (!wc) return '';
+    let h = wc.hour;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    if (h === 0) h = 12;
+    else if (h > 12) h -= 12;
+    const min = String(wc.minute).padStart(2, '0');
+    if (opts.showSeconds) {
+        const sec = String(wc.second || 0).padStart(2, '0');
+        return `${h}:${min}:${sec} ${ampm}`;
+    }
+    return `${h}:${min} ${ampm}`;
+}
+
+/**
  * Escape HTML to prevent XSS in user input displayed in result
  */
 function escapeHtml(text) {
@@ -591,8 +627,8 @@ function handleConversion() {
             const convertedStartTime = formatInTimezone(utcDate, targetTimezone, { showSeconds: false });
             const convertedEndTime = formatInTimezone(rangeEndUtcDate, targetTimezone, { showSeconds: false });
             const convertedDate = formatDateInTimezone(utcDate, targetTimezone);
-            const originalStartTime = formatInTimezone(utcDate, sourceTimezone, { showSeconds: false });
-            const originalEndTime = formatInTimezone(rangeEndUtcDate, sourceTimezone, { showSeconds: false });
+            const originalStartTime = parseResult.wallClock ? formatWallClock(parseResult.wallClock) : formatInTimezone(utcDate, sourceTimezone, { showSeconds: false });
+            const originalEndTime = parseResult.rangeEndWallClock ? formatWallClock(parseResult.rangeEndWallClock) : formatInTimezone(rangeEndUtcDate, sourceTimezone, { showSeconds: false });
 
             const resultHtml = `
                 <div style="color: #ffffff; font-weight: 600; margin-bottom: 12px; font-size: 14px;">&#10003; Time Range Converted</div>
@@ -623,7 +659,7 @@ function handleConversion() {
             // ---- Single time conversion ----
             const convertedTime = formatInTimezone(utcDate, targetTimezone, { showSeconds: true });
             const convertedDate = formatDateInTimezone(utcDate, targetTimezone);
-            const originalTime = formatInTimezone(utcDate, sourceTimezone, { showSeconds: true });
+            const originalTime = parseResult.wallClock ? formatWallClock(parseResult.wallClock, { showSeconds: true }) : formatInTimezone(utcDate, sourceTimezone, { showSeconds: true });
 
             const resultHtml = `
                 <div style="color: #ffffff; font-weight: 600; margin-bottom: 12px; font-size: 14px;">&#10003; Time Converted</div>
