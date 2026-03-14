@@ -26,16 +26,32 @@ function preprocess(rawText) {
     const contextClues = [];
     let text = rawText;
 
-    // 1. Extract parenthetical offsets: (GMT-5:00), (UTC+01:00), (GMT+5:30)
-    const offsetRegex = /\((?:GMT|UTC)\s*([+-])\s*(\d{1,2}):?(\d{2})?\)/gi;
+    // 1. Extract GMT/UTC offsets — both parenthetical and bare forms:
+    //    (GMT-5:00), (UTC+01:00), GMT-5, UTC+5:30, GMT-5:00
     let extractedOffset = null;
-    const offsetMatch = offsetRegex.exec(text);
-    if (offsetMatch) {
-        const sign = offsetMatch[1] === '+' ? 1 : -1;
-        const hours = parseInt(offsetMatch[2]);
-        const minutes = offsetMatch[3] ? parseInt(offsetMatch[3]) : 0;
+
+    // Try parenthetical first: (GMT-5:00), (UTC+01:00)
+    const parenOffsetRegex = /\((?:GMT|UTC)\s*([+-])\s*(\d{1,2}):?(\d{2})?\)/gi;
+    const parenMatch = parenOffsetRegex.exec(text);
+    if (parenMatch) {
+        const sign = parenMatch[1] === '+' ? 1 : -1;
+        const hours = parseInt(parenMatch[2]);
+        const minutes = parenMatch[3] ? parseInt(parenMatch[3]) : 0;
         extractedOffset = sign * (hours * 60 + minutes);
-        text = text.replace(offsetMatch[0], ' ');
+        text = text.replace(parenMatch[0], ' ');
+    }
+
+    // If no parenthetical match, try bare: GMT-5, UTC+5:30, GMT-5:00
+    if (extractedOffset === null) {
+        const bareOffsetRegex = /\b(?:GMT|UTC)\s*([+-])\s*(\d{1,2}):?(\d{2})?\b/gi;
+        const bareMatch = bareOffsetRegex.exec(text);
+        if (bareMatch) {
+            const sign = bareMatch[1] === '+' ? 1 : -1;
+            const hours = parseInt(bareMatch[2]);
+            const minutes = bareMatch[3] ? parseInt(bareMatch[3]) : 0;
+            extractedOffset = sign * (hours * 60 + minutes);
+            text = text.replace(bareMatch[0], ' ');
+        }
     }
 
     // 2. Extract bracket content as context clues: [US & Canada]
