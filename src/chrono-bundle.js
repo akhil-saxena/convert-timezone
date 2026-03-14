@@ -262,6 +262,8 @@ function parse(text, options = {}) {
         // Carry original wall-clock components so the UI can display
         // what the user typed (e.g. "12 PM") rather than reformatting
         // through the zone's current DST offset (which could show "1 PM")
+        // Whether the user explicitly provided a date (vs chrono defaulting to today)
+        hasExplicitDate: startComp.isCertain('day') || startComp.isCertain('month') || startComp.isCertain('year'),
         wallClock: { year, month, day, hour, minute, second },
         rangeEndWallClock: isRange ? {
             year: chronoResult.end.get('year'),

@@ -543,6 +543,18 @@ function formatWallClock(wc, opts = {}) {
 }
 
 /**
+ * Format a short date (e.g. "Sat, Mar 15") for cross-midnight range display
+ */
+function formatShortDateInTimezone(utcDate, ianaZone) {
+    return new Intl.DateTimeFormat('en-US', {
+        timeZone: ianaZone,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+    }).format(utcDate);
+}
+
+/**
  * Escape HTML to prevent XSS in user input displayed in result
  */
 function escapeHtml(text) {
@@ -658,9 +670,28 @@ function handleConversion() {
             // ---- Time range conversion ----
             const convertedStartTime = formatInTimezone(utcDate, targetTimezone, { showSeconds: false });
             const convertedEndTime = formatInTimezone(rangeEndUtcDate, targetTimezone, { showSeconds: false });
-            const convertedDate = formatDateInTimezone(utcDate, targetTimezone);
             const originalStartTime = parseResult.wallClock ? formatWallClock(parseResult.wallClock) : formatInTimezone(utcDate, sourceTimezone, { showSeconds: false });
             const originalEndTime = parseResult.rangeEndWallClock ? formatWallClock(parseResult.rangeEndWallClock) : formatInTimezone(rangeEndUtcDate, sourceTimezone, { showSeconds: false });
+
+            // Date display: only if user provided a date, and handle cross-midnight
+            let dateHtml = '';
+            if (parseResult.hasExplicitDate) {
+                const startDate = formatDateInTimezone(utcDate, targetTimezone);
+                const endDate = formatDateInTimezone(rangeEndUtcDate, targetTimezone);
+                if (startDate === endDate) {
+                    dateHtml = `<div style="color: #374151; font-size: 13px; margin-bottom: 8px;">${startDate}</div>`;
+                } else {
+                    // Cross-midnight: show date for each time
+                    dateHtml = `<div style="color: #374151; font-size: 13px; margin-bottom: 8px;">${formatShortDateInTimezone(utcDate, targetTimezone)} - ${formatShortDateInTimezone(rangeEndUtcDate, targetTimezone)}</div>`;
+                }
+            } else {
+                // No explicit date: check if range crosses midnight and show dates if so
+                const startDay = new Intl.DateTimeFormat('en-US', { timeZone: targetTimezone, day: 'numeric' }).format(utcDate);
+                const endDay = new Intl.DateTimeFormat('en-US', { timeZone: targetTimezone, day: 'numeric' }).format(rangeEndUtcDate);
+                if (startDay !== endDay) {
+                    dateHtml = `<div style="color: #374151; font-size: 13px; margin-bottom: 8px;">${formatShortDateInTimezone(utcDate, targetTimezone)} - ${formatShortDateInTimezone(rangeEndUtcDate, targetTimezone)}</div>`;
+                }
+            }
 
             const resultHtml = `
                 <div style="color: #ffffff; font-weight: 600; margin-bottom: 12px; font-size: 14px;">&#10003; Time Range Converted</div>
@@ -669,9 +700,7 @@ function handleConversion() {
                     <div style="color: #111827; font-weight: 700; font-size: 18px; margin-bottom: 6px;">
                         ${convertedStartTime} - ${convertedEndTime}
                     </div>
-                    <div style="color: #374151; font-size: 13px; margin-bottom: 8px;">
-                        ${convertedDate}
-                    </div>
+                    ${dateHtml}
                     <div style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 20px; display: inline-block;">
                         <div style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
                             ${escapeHtml(targetDisplay)}
@@ -690,8 +719,12 @@ function handleConversion() {
         } else {
             // ---- Single time conversion ----
             const convertedTime = formatInTimezone(utcDate, targetTimezone, { showSeconds: true });
-            const convertedDate = formatDateInTimezone(utcDate, targetTimezone);
             const originalTime = parseResult.wallClock ? formatWallClock(parseResult.wallClock, { showSeconds: true }) : formatInTimezone(utcDate, sourceTimezone, { showSeconds: true });
+
+            // Only show date if user explicitly provided one
+            const singleDateHtml = parseResult.hasExplicitDate
+                ? `<div style="color: #374151; font-size: 13px; margin-bottom: 8px;">${formatDateInTimezone(utcDate, targetTimezone)}</div>`
+                : '';
 
             const resultHtml = `
                 <div style="color: #ffffff; font-weight: 600; margin-bottom: 12px; font-size: 14px;">&#10003; Time Converted</div>
@@ -700,9 +733,7 @@ function handleConversion() {
                     <div style="color: #111827; font-weight: 700; font-size: 22px; margin-bottom: 6px;">
                         ${convertedTime}
                     </div>
-                    <div style="color: #374151; font-size: 13px; margin-bottom: 8px;">
-                        ${convertedDate}
-                    </div>
+                    ${singleDateHtml}
                     <div style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 20px; display: inline-block;">
                         <div style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
                             ${escapeHtml(targetDisplay)}
