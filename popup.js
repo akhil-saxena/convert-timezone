@@ -703,6 +703,7 @@ function handleConversion() {
         } else {
             sourceDisplay = sourceTimezoneObj ? sourceTimezoneObj.displayName : sourceTimezone;
         }
+        const sourceLongName = sourceTimezoneObj ? sourceTimezoneObj.longName : '';
 
         if (isRange && rangeEndUtcDate) {
             // ---- Time range conversion ----
@@ -749,7 +750,7 @@ function handleConversion() {
                 <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px; font-size: 12px;">
                     <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 2px;">Original Range:</div>
                     <div style="color: #ffffff;">${originalStartTime} - ${originalEndTime}</div>
-                    <div style="color: #e2e8f0; font-size: 11px; margin-top: 2px;">${escapeHtml(sourceDisplay)}</div>
+                    <div style="color: #e2e8f0; font-size: 11px; margin-top: 2px;">${escapeHtml(sourceDisplay)}</div>${sourceLongName ? `<div style="color: #cbd5e1; font-size: 10px; margin-top: 1px;">${escapeHtml(sourceLongName)}</div>` : ''}
                 </div>
             `;
 
@@ -791,7 +792,7 @@ function handleConversion() {
                 <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px; font-size: 12px;">
                     <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 2px;">Original Time:</div>
                     <div style="color: #ffffff;">${originalTime}</div>
-                    <div style="color: #e2e8f0; font-size: 11px; margin-top: 2px;">${escapeHtml(sourceDisplay)}</div>
+                    <div style="color: #e2e8f0; font-size: 11px; margin-top: 2px;">${escapeHtml(sourceDisplay)}</div>${sourceLongName ? `<div style="color: #cbd5e1; font-size: 10px; margin-top: 1px;">${escapeHtml(sourceLongName)}</div>` : ''}
                 </div>
             `;
 
