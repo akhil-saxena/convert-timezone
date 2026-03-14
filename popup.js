@@ -25,7 +25,6 @@ const elements = {
     toTimezoneSearch: null,
     toTimezoneOptions: null,
     nowBtn: null,
-    swapBtn: null,
     copyBtn: null,
     copyBtnText: null
 };
@@ -67,7 +66,6 @@ function initializeElements() {
     elements.toTimezoneSearch = document.getElementById('toTimezoneSearch');
     elements.toTimezoneOptions = document.getElementById('toTimezoneOptions');
     elements.nowBtn = document.getElementById('nowBtn');
-    elements.swapBtn = document.getElementById('swapBtn');
     elements.copyBtn = document.getElementById('copyBtn');
     elements.copyBtnText = document.getElementById('copyBtnText');
 }
@@ -132,21 +130,6 @@ function setupEventListeners() {
         const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         elements.dateTimeInput.value = timeStr;
         handleConversion();
-    });
-
-    // Swap button — swap From and To timezones
-    elements.swapBtn.addEventListener('click', function() {
-        const tempTimezone = selectedFromTimezone;
-        const tempLabel = elements.fromTimezoneDropdown.querySelector('.selected-text').textContent;
-
-        selectedFromTimezone = selectedToTimezone;
-        elements.fromTimezoneDropdown.querySelector('.selected-text').textContent =
-            elements.toTimezoneDropdown.querySelector('.selected-text').textContent;
-
-        selectedToTimezone = tempTimezone;
-        elements.toTimezoneDropdown.querySelector('.selected-text').textContent = tempLabel;
-
-        saveTimezonePreferences();
     });
 
     // Copy button — copy last conversion text to clipboard
