@@ -218,7 +218,12 @@ function buildTimezoneDisplayName(ianaZone) {
         const abbr = abbrFormatter.formatToParts(now)
             .find(p => p.type === 'timeZoneName')?.value || '';
         const city = ianaZone.split('/').pop().replace(/_/g, ' ');
-        return `${city} (${utcOffset}) ${abbr}`;
+        // If abbreviation is just a GMT offset (e.g. "GMT+5:30"), skip it —
+        // we already show the UTC offset in parentheses
+        if (abbr && !abbr.startsWith('GMT') && !abbr.startsWith('UTC')) {
+            return `${city} (${utcOffset}) ${abbr}`;
+        }
+        return `${city} (${utcOffset})`;
     } catch {
         return ianaZone;
     }
