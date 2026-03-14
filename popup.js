@@ -231,32 +231,40 @@ const CURATED_TIMEZONES = [
 /**
  * Build a human-readable display name for an IANA timezone using Intl APIs
  */
-function buildTimezoneDisplayName(ianaZone) {
-    if (ianaZone === 'UTC') return 'UTC (Coordinated Universal Time)';
+/**
+ * Build timezone info for display.
+ * Returns { displayName, longName } where:
+ *   displayName = "Chicago (UTC-05:00)" — shown in dropdown trigger + result labels
+ *   longName = "Central Standard Time" — shown as second line in dropdown options
+ */
+function buildTimezoneInfo(ianaZone) {
+    if (ianaZone === 'UTC') return {
+        displayName: 'UTC (Coordinated Universal Time)',
+        longName: 'Coordinated Universal Time'
+    };
     try {
         const now = new Date();
-        // Get offset like "GMT-04:00" and convert to "UTC-04:00"
+        // Offset like "GMT-04:00" → "UTC-04:00"
         const offsetFormatter = new Intl.DateTimeFormat('en-US', {
             timeZone: ianaZone, timeZoneName: 'longOffset'
         });
         const offsetStr = offsetFormatter.formatToParts(now)
             .find(p => p.type === 'timeZoneName')?.value || '';
         const utcOffset = offsetStr.replace('GMT', 'UTC');
-        // Get abbreviation like "EDT"
-        const abbrFormatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: ianaZone, timeZoneName: 'short'
+
+        // Long timezone name like "Central Standard Time"
+        const longFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: ianaZone, timeZoneName: 'long'
         });
-        const abbr = abbrFormatter.formatToParts(now)
+        const longName = longFormatter.formatToParts(now)
             .find(p => p.type === 'timeZoneName')?.value || '';
+
         const city = ianaZone.split('/').pop().replace(/_/g, ' ');
-        // If abbreviation is just a GMT offset (e.g. "GMT+5:30"), skip it —
-        // we already show the UTC offset in parentheses
-        if (abbr && !abbr.startsWith('GMT') && !abbr.startsWith('UTC')) {
-            return `${city} (${utcOffset}) ${abbr}`;
-        }
-        return `${city} (${utcOffset})`;
+        const displayName = `${city} (${utcOffset})`;
+
+        return { displayName, longName };
     } catch {
-        return ianaZone;
+        return { displayName: ianaZone, longName: '' };
     }
 }
 
@@ -319,7 +327,7 @@ function detectUserTimezone() {
 function initializeTimezones() {
     timezones = CURATED_TIMEZONES.map(tz => {
         try {
-            const displayName = buildTimezoneDisplayName(tz.name);
+            const { displayName, longName } = buildTimezoneInfo(tz.name);
             const utcOffset = getTimezoneOffsetMinutes(tz.name);
             const parts = tz.name.split('/');
             const city = parts[parts.length - 1].replace(/_/g, ' ');
@@ -329,7 +337,8 @@ function initializeTimezones() {
                 city: city,
                 region: tz.region,
                 displayName: displayName,
-                searchText: `${tz.name} ${city} ${tz.region} ${displayName}`.toLowerCase(),
+                longName: longName,
+                searchText: `${tz.name} ${city} ${tz.region} ${displayName} ${longName}`.toLowerCase(),
                 utcOffset: utcOffset,
                 priority: tz.priority,
                 sortKey: `${tz.priority}_${utcOffset.toString().padStart(5, '0')}_${city}`
@@ -370,12 +379,12 @@ function populateTimezoneOptions() {
     });
     elements.toTimezoneOptions.appendChild(autoDetectOption);
 
-    // Add timezone options without separators
+    // Add timezone options with two-line display
     timezones.forEach((timezone) => {
         // From timezone option
         const fromOption = document.createElement('div');
         fromOption.className = 'dropdown-option';
-        fromOption.textContent = timezone.displayName;
+        fromOption.innerHTML = `${escapeHtml(timezone.displayName)}${timezone.longName ? `<span class="tz-long-name">${escapeHtml(timezone.longName)}</span>` : ''}`;
         fromOption.dataset.timezone = timezone.name;
         fromOption.addEventListener('click', function() {
             selectTimezone('from', timezone.name, timezone.displayName);
@@ -385,7 +394,7 @@ function populateTimezoneOptions() {
         // To timezone option
         const toOption = document.createElement('div');
         toOption.className = 'dropdown-option';
-        toOption.textContent = timezone.displayName;
+        toOption.innerHTML = `${escapeHtml(timezone.displayName)}${timezone.longName ? `<span class="tz-long-name">${escapeHtml(timezone.longName)}</span>` : ''}`;
         toOption.dataset.timezone = timezone.name;
         toOption.addEventListener('click', function() {
             selectTimezone('to', timezone.name, timezone.displayName);
