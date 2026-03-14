@@ -255,7 +255,19 @@ function parse(text, options = {}) {
         sourceTimezone: effectiveZone,
         confidence,
         isRange,
-        rangeEndUtcDate
+        rangeEndUtcDate,
+        // Carry original wall-clock components so the UI can display
+        // what the user typed (e.g. "12 PM") rather than reformatting
+        // through the zone's current DST offset (which could show "1 PM")
+        wallClock: { year, month, day, hour, minute, second },
+        rangeEndWallClock: isRange ? {
+            year: chronoResult.end.get('year'),
+            month: chronoResult.end.get('month') - 1,
+            day: chronoResult.end.get('day'),
+            hour: chronoResult.end.get('hour'),
+            minute: chronoResult.end.get('minute'),
+            second: chronoResult.end.get('second') || 0
+        } : null
     };
 }
 
