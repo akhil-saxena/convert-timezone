@@ -256,6 +256,9 @@ function parse(text, options = {}) {
         confidence,
         isRange,
         rangeEndUtcDate,
+        // When user explicitly stated an offset like (GMT-5:00), carry it
+        // so the UI shows "UTC-05:00" instead of the zone's current DST label
+        explicitOffset: extractedOffset,
         // Carry original wall-clock components so the UI can display
         // what the user typed (e.g. "12 PM") rather than reformatting
         // through the zone's current DST offset (which could show "1 PM")
