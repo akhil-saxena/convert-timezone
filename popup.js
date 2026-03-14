@@ -596,7 +596,17 @@ function handleConversion() {
             const detectedObj = timezones.find(tz => tz.name === sourceTimezone);
             if (detectedObj) {
                 selectedFromTimezone = sourceTimezone;
-                elements.fromTimezoneDropdown.querySelector('.selected-text').textContent = detectedObj.displayName;
+                // If explicit offset was given, show it in dropdown instead of current DST label
+                if (parseResult.explicitOffset !== null && parseResult.explicitOffset !== undefined) {
+                    const sign = parseResult.explicitOffset >= 0 ? '+' : '-';
+                    const absMin = Math.abs(parseResult.explicitOffset);
+                    const h = String(Math.floor(absMin / 60)).padStart(2, '0');
+                    const m = String(absMin % 60).padStart(2, '0');
+                    const city = sourceTimezone.split('/').pop().replace(/_/g, ' ');
+                    elements.fromTimezoneDropdown.querySelector('.selected-text').textContent = `${city} (UTC${sign}${h}:${m})`;
+                } else {
+                    elements.fromTimezoneDropdown.querySelector('.selected-text').textContent = detectedObj.displayName;
+                }
             }
         }
 
@@ -619,8 +629,25 @@ function handleConversion() {
         // Look up display objects
         const sourceTimezoneObj = timezones.find(tz => tz.name === sourceTimezone);
         const targetTimezoneObj = timezones.find(tz => tz.name === targetTimezone);
-        const sourceDisplay = sourceTimezoneObj ? sourceTimezoneObj.displayName : sourceTimezone;
         const targetDisplay = targetTimezoneObj ? targetTimezoneObj.displayName : targetTimezone;
+
+        // When user explicitly stated an offset like (GMT-5:00), show that offset
+        // instead of the zone's current DST label (which might show UTC-4/EDT)
+        let sourceDisplay;
+        if (parseResult.explicitOffset !== null && parseResult.explicitOffset !== undefined) {
+            const sign = parseResult.explicitOffset >= 0 ? '+' : '-';
+            const absMin = Math.abs(parseResult.explicitOffset);
+            const h = String(Math.floor(absMin / 60)).padStart(2, '0');
+            const m = String(absMin % 60).padStart(2, '0');
+            sourceDisplay = `UTC${sign}${h}:${m}`;
+            // Also add context clues if we resolved a zone
+            if (sourceTimezoneObj) {
+                const city = sourceTimezone.split('/').pop().replace(/_/g, ' ');
+                sourceDisplay = `${city} (${sourceDisplay})`;
+            }
+        } else {
+            sourceDisplay = sourceTimezoneObj ? sourceTimezoneObj.displayName : sourceTimezone;
+        }
 
         if (isRange && rangeEndUtcDate) {
             // ---- Time range conversion ----
