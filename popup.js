@@ -659,18 +659,16 @@ function handleConversion() {
         }
 
         // Determine target timezone
+        // When confidence is high (timezone detected from text), always default To
+        // to the user's local timezone — this gives the most useful result
+        // (e.g., "EST → your local time") regardless of previously saved prefs
         let targetTimezone = selectedToTimezone;
-        if (!targetTimezone) {
-            // If confidence is high (timezone detected from text), auto-set To to user's tz
-            if (confidence === 'high') {
-                targetTimezone = userTimezone;
-                const userTzObj = timezones.find(tz => tz.name === userTimezone);
-                if (userTzObj) {
-                    selectedToTimezone = userTimezone;
-                    elements.toTimezoneDropdown.querySelector('.selected-text').textContent = userTzObj.displayName;
-                }
-            } else {
-                targetTimezone = userTimezone;
+        if (!targetTimezone || (confidence === 'high' && targetTimezone !== userTimezone)) {
+            targetTimezone = userTimezone;
+            const userTzObj = timezones.find(tz => tz.name === userTimezone);
+            if (userTzObj) {
+                selectedToTimezone = userTimezone;
+                elements.toTimezoneDropdown.querySelector('.selected-text').textContent = userTzObj.displayName;
             }
         }
 
