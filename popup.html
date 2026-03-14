@@ -50,8 +50,9 @@
         
         .input-group {
             margin-bottom: 12px;
+            position: relative;
         }
-        
+
         .input-group label {
             display: block;
             margin-bottom: 6px;
@@ -59,10 +60,10 @@
             font-size: 13px;
             opacity: 0.9;
         }
-        
+
         .input-group input {
             width: 100%;
-            padding: 8px 12px;
+            padding: 8px 36px 8px 12px;
             border: none;
             border-radius: 10px;
             background: rgba(255, 255, 255, 0.9);
@@ -71,6 +72,34 @@
             box-sizing: border-box;
             height: 32px;
             transition: all 0.2s ease;
+        }
+
+        .now-btn {
+            position: absolute;
+            right: 4px;
+            bottom: 2px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            opacity: 0.45;
+            transition: opacity 0.2s ease, background 0.2s ease;
+        }
+
+        .now-btn:hover {
+            opacity: 0.75;
+            background: rgba(0, 0, 0, 0.06);
+        }
+
+        .now-btn svg {
+            width: 16px;
+            height: 16px;
         }
         
         .input-group input:hover {
@@ -239,6 +268,62 @@
             letter-spacing: 1px;
         }
         
+        .swap-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2px auto 8px;
+            width: 36px;
+            height: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 11px;
+            background: rgba(255, 255, 255, 0.13);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(6px);
+        }
+
+        .swap-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 11px;
+            line-height: 1;
+            transition: all 0.2s ease;
+            display: none;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+
+        .copy-btn.visible {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .copy-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
         .btn {
             width: 100%;
             padding: 10px;
@@ -261,6 +346,7 @@
         }
         
         .result {
+            position: relative;
             margin-bottom: 12px;
             padding: 12px;
             border-radius: 12px;
@@ -313,12 +399,26 @@
         <p>Convert time across global timezones instantly</p>
     </div>
 
-    <div class="result" id="result"></div>
+    <div class="result" id="result">
+        <button class="copy-btn" id="copyBtn" title="Copy result">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+                <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
+            </svg>
+            <span id="copyBtnText">Copy</span>
+        </button>
+    </div>
     
     <div class="converter-section">
         <div class="input-group">
             <label for="dateTimeInput">Enter Date/Time:</label>
             <input type="text" id="dateTimeInput" placeholder="e.g., Tuesday, Sep 2, 2025 12:00 PM">
+            <button class="now-btn" id="nowBtn" title="Fill current time">
+                <svg viewBox="0 0 16 16" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="8" cy="8" r="6.5"/>
+                    <polyline points="8,4 8,8 11,10"/>
+                </svg>
+            </button>
         </div>
         
         <div class="timezone-group">
@@ -336,7 +436,9 @@
                 </div>
             </div>
         </div>
-        
+
+        <button class="swap-btn" id="swapBtn" title="Swap timezones">&#8645;</button>
+
         <div class="timezone-group">
             <label>To Timezone:</label>
             <div class="dropdown-container" id="toTimezoneContainer">
