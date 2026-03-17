@@ -265,11 +265,43 @@ const REGION_CONTEXT_MAP = {
   'Atlantic': 'America/Halifax'
 };
 
+// Offset priority — maps offset minutes (as string) to ordered list of candidate zones
+const OFFSET_PRIORITY = {
+  '-600': ['Pacific/Honolulu'],
+  '-540': ['America/Anchorage'],
+  '-480': ['America/Los_Angeles', 'America/Vancouver'],
+  '-420': ['America/Denver', 'America/Phoenix', 'America/Edmonton'],
+  '-360': ['America/Chicago', 'America/Winnipeg', 'America/Mexico_City'],
+  '-300': ['America/New_York', 'America/Toronto', 'America/Chicago', 'America/Lima'],
+  '-240': ['America/Halifax'],
+  '-180': ['America/Sao_Paulo', 'America/Argentina/Buenos_Aires'],
+  '0': ['UTC', 'Europe/London'],
+  '60': ['Europe/Paris', 'Europe/Berlin', 'Africa/Lagos'],
+  '120': ['Europe/Helsinki', 'Europe/Athens', 'Africa/Cairo', 'Africa/Johannesburg'],
+  '180': ['Europe/Moscow', 'Europe/Istanbul', 'Asia/Riyadh', 'Africa/Nairobi'],
+  '210': ['Asia/Tehran'],
+  '240': ['Asia/Dubai'],
+  '270': ['Asia/Kabul'],
+  '300': ['Asia/Karachi'],
+  '330': ['Asia/Kolkata'],
+  '345': ['Asia/Kathmandu'],
+  '360': ['Asia/Dhaka'],
+  '390': ['Asia/Yangon'],
+  '420': ['Asia/Bangkok', 'Asia/Jakarta'],
+  '480': ['Asia/Shanghai', 'Asia/Singapore', 'Asia/Hong_Kong', 'Asia/Taipei', 'Australia/Perth'],
+  '540': ['Asia/Tokyo', 'Asia/Seoul'],
+  '570': ['Australia/Adelaide'],
+  '600': ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane'],
+  '660': ['Pacific/Noumea'],
+  '720': ['Pacific/Auckland'],
+  '780': ['Pacific/Apia']
+};
+
 // Cities that are common English words — require signal word to match
 const CITY_BLOCKLIST = ['nice', 'reading', 'bath', 'mobile', 'victoria', 'regina', 'orange'];
 
 module.exports = {
   IANA_ZONES, CITY_DICTIONARY, COUNTRY_DICTIONARY,
   ABBREVIATION_MAP, AMBIGUOUS_ABBREVIATIONS, VERBOSE_TIMEZONE_MAP,
-  REGION_CONTEXT_MAP, CITY_BLOCKLIST
+  REGION_CONTEXT_MAP, OFFSET_PRIORITY, CITY_BLOCKLIST
 };
