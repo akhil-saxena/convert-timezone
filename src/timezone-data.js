@@ -27,7 +27,7 @@ const CITY_DICTIONARY = {
   'copenhagen': 'Europe/Copenhagen', 'helsinki': 'Europe/Helsinki', 'warsaw': 'Europe/Warsaw',
   'prague': 'Europe/Prague', 'budapest': 'Europe/Budapest', 'bucharest': 'Europe/Bucharest',
   'athens': 'Europe/Athens', 'istanbul': 'Europe/Istanbul', 'moscow': 'Europe/Moscow',
-  'kyiv': 'Europe/Kyiv', 'dublin': 'Europe/Dublin',
+  'kyiv': 'Europe/Kyiv', 'dublin': 'Europe/Dublin', 'nice': 'Europe/Paris',
   // Asia
   'tokyo': 'Asia/Tokyo', 'osaka': 'Asia/Tokyo',
   'shanghai': 'Asia/Shanghai', 'beijing': 'Asia/Shanghai', 'hong kong': 'Asia/Hong_Kong',
