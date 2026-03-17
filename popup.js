@@ -771,14 +771,15 @@ function selectTimezone(type, timezoneName) {
 // ============================================================
 
 function swapTimezones() {
-    const tempFrom = selectedFromTimezone;
-    const tempTo = selectedToTimezone;
+    // Resolve actual timezone values (null means user's local timezone)
+    const actualFrom = selectedFromTimezone || userTimezone;
+    const actualTo = selectedToTimezone || userTimezone;
 
-    selectedFromTimezone = tempTo;
-    selectedToTimezone = tempFrom;
+    selectedFromTimezone = actualTo;
+    selectedToTimezone = actualFrom;
 
-    const fromTz = selectedFromTimezone ? timezones.find(tz => tz.name === selectedFromTimezone) : null;
-    const toTz = selectedToTimezone ? timezones.find(tz => tz.name === selectedToTimezone) : null;
+    const fromTz = timezones.find(tz => tz.name === selectedFromTimezone) || null;
+    const toTz = timezones.find(tz => tz.name === selectedToTimezone) || null;
 
     updatePillDisplay('from', fromTz);
     updatePillDisplay('to', toTz);
@@ -1043,7 +1044,8 @@ function handleConversion() {
             const dayDiff = getDayDiffLabel(utcDate, sourceTimezone, targetTimezone);
 
             el.resultContent.innerHTML = `
-                <div class="result-converted-time">${convertedTime}${dayDiff ? `<span class="day-diff">${dayDiff}</span>` : ''}</div>
+                <div class="result-converted-time">${convertedTime}</div>
+                ${dayDiff ? `<div class="day-diff">${dayDiff}</div>` : ''}
                 ${singleDateText ? `<div class="result-date">${escapeHtml(singleDateText)}</div>` : ''}
                 <div class="result-tz-name">${escapeHtml(targetTzName)}</div>
                 <div class="result-original">
