@@ -162,3 +162,145 @@ describe('Integration: full parse() pipeline', () => {
     });
 
 });
+
+describe('Universal parser integration', () => {
+
+    // Glued tokens
+    describe('Glued tokens', () => {
+
+        it('parses 3pmEST', () => {
+            const r = parse('3pmEST', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'America/New_York');
+            assert.equal(r.confidence, 'high');
+        });
+
+        it('parses 3pm est (lowercase)', () => {
+            const r = parse('3pm est', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'America/New_York');
+        });
+
+        it('parses 2:30pmIST', () => {
+            const r = parse('2:30pmIST', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'Asia/Kolkata');
+        });
+
+    });
+
+    // AM/PM variants
+    describe('AM/PM variants', () => {
+
+        it('parses 3:00 p.m. EST', () => {
+            const r = parse('3:00 p.m. EST', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'America/New_York');
+        });
+
+    });
+
+    // International formats
+    describe('International formats', () => {
+
+        it('parses 15h00 CET (French)', () => {
+            const r = parse('15h00 CET', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'Europe/Paris');
+        });
+
+        it('parses 15.30 Uhr MEZ (German)', () => {
+            const r = parse('15.30 Uhr MEZ', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+        });
+
+    });
+
+    // City-based
+    describe('City-based timezones', () => {
+
+        it('parses "3pm in London"', () => {
+            const r = parse('3pm in London', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'Europe/London');
+            assert.equal(r.confidence, 'high');
+        });
+
+        it('parses "Meeting at 3pm Tokyo time"', () => {
+            const r = parse('Meeting at 3pm Tokyo time', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'Asia/Tokyo');
+        });
+
+    });
+
+    // Verbose timezone
+    describe('Verbose timezone names', () => {
+
+        it('parses "3:00 p.m. Eastern Standard Time"', () => {
+            const r = parse('3:00 p.m. Eastern Standard Time', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'America/New_York');
+        });
+
+    });
+
+    // Complex real-world
+    describe('Complex real-world formats', () => {
+
+        it('parses "3:00 PM (GMT-5:00) Eastern [US & Canada]"', () => {
+            const r = parse('3:00 PM (GMT-5:00) Eastern [US & Canada]', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.confidence, 'high');
+        });
+
+    });
+
+    // Confidence levels
+    describe('Confidence levels', () => {
+
+        it('returns low confidence for bare time', () => {
+            const r = parse('3:00 PM', { userTimezone: 'America/New_York' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.confidence, 'low');
+        });
+
+        it('returns high confidence for CST (disambiguated via chrono offset)', () => {
+            const r = parse('3pm CST', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'America/Chicago');
+            // CST is ambiguous but chrono offset disambiguation upgrades to high
+            assert.equal(r.confidence, 'high');
+        });
+
+    });
+
+    // Rejections (should still work)
+    describe('Rejections', () => {
+
+        it('rejects bare number', () => {
+            assert.equal(parse('12', { userTimezone: 'UTC' }), null);
+        });
+
+        it('rejects date-only', () => {
+            assert.equal(parse('March 15, 2025', { userTimezone: 'UTC' }), null);
+        });
+
+        it('rejects gibberish', () => {
+            assert.equal(parse('hello world', { userTimezone: 'UTC' }), null);
+        });
+
+    });
+
+    // HTML sanitization end-to-end
+    describe('HTML sanitization end-to-end', () => {
+
+        it('parses time from HTML-heavy input', () => {
+            const r = parse('<span>3:00&nbsp;PM</span> <br>EST', { userTimezone: 'UTC' });
+            assert.ok(r, 'Should not return null');
+            assert.equal(r.sourceTimezone, 'America/New_York');
+        });
+
+    });
+
+});
