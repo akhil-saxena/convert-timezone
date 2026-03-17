@@ -1107,13 +1107,9 @@ function handleConversion() {
             showResult(resultHtml, 'success');
         }
 
-        // Wire up "Report Issue" — use chrome.tabs.create because mailto: doesn't work in popup
-        const mailtoUrl = buildReportMailto(inputText, parseResult, lastConversionText);
-        elements.reportIssueLink.href = mailtoUrl;
-        elements.reportIssueLink.onclick = function(e) {
-            e.preventDefault();
-            chrome.tabs.create({ url: mailtoUrl });
-        };
+        // Wire up "Report Issue" mailto link
+        elements.reportIssueLink.href = buildReportMailto(inputText, parseResult, lastConversionText);
+        elements.reportIssueLink.target = '_blank';
         elements.reportIssueLink.style.display = 'inline';
 
     } catch (error) {
