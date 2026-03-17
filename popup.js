@@ -30,7 +30,6 @@ const elements = {
     confidenceBar: null,
     confidenceText: null,
     confidenceChangeBtn: null,
-    reportIssueLink: null
 };
 
 /**
@@ -78,7 +77,6 @@ function initializeElements() {
     elements.confidenceBar = document.getElementById('confidenceBar');
     elements.confidenceText = document.getElementById('confidenceText');
     elements.confidenceChangeBtn = document.getElementById('confidenceChangeBtn');
-    elements.reportIssueLink = document.getElementById('reportIssueLink');
 }
 
 /**
@@ -99,7 +97,6 @@ function setupEventListeners() {
     elements.dateTimeInput.addEventListener('input', function() {
         elements.result.classList.remove('show');
         elements.confidenceBar.style.display = 'none';
-        elements.reportIssueLink.style.display = 'none';
     });
 
     // From timezone dropdown
@@ -848,48 +845,6 @@ function escapeHtml(text) {
 // Conversion logic — uses TimeShiftParser + Intl formatting
 // ============================================================
 
-/**
- * Build a mailto: URL pre-filled with bug report details
- */
-function buildReportMailto(inputText, parseResult, convertedOutput) {
-    const to = 'saxena.akhil42@gmail.com';
-    const subject = encodeURIComponent('TimeShift Bug Report \u2014 Incorrect Conversion');
-
-    const body = encodeURIComponent(
-`TimeShift Bug Report
-=====================
-
-Input Text: "${inputText}"
-
-Parse Result:
-- Source Timezone: ${parseResult.sourceTimezone}
-- Confidence: ${parseResult.confidence}
-- Confidence Detail: ${parseResult.confidenceDetail || 'N/A'}
-- Detected Locale: ${parseResult.detectedLocale || 'en'}
-- City Match: ${parseResult.cityMatch || 'None'}
-- Explicit Offset: ${parseResult.explicitOffset ?? 'None'}
-- Is Range: ${parseResult.isRange}
-- Has Explicit Date: ${parseResult.hasExplicitDate}
-- Wall Clock: ${JSON.stringify(parseResult.wallClock)}
-- UTC Date: ${parseResult.utcDate?.toISOString() || 'N/A'}
-
-Converted Output: "${convertedOutput}"
-
-Expected Output:
-[Please describe what the correct conversion should be]
-
-Additional Context:
-[Any other details about where you found this time text]
-
----
-TimeShift v2.2.0 | ${new Date().toISOString()}
-User Timezone: ${userTimezone}
-User Agent: ${navigator.userAgent}
-`
-    );
-
-    return `mailto:${to}?subject=${subject}&body=${body}`;
-}
 
 /**
  * Handle time conversion
@@ -899,7 +854,6 @@ function handleConversion() {
 
     if (!inputText) {
         elements.confidenceBar.style.display = 'none';
-        elements.reportIssueLink.style.display = 'none';
         showResult('Please enter a date/time to convert.', 'error');
         return;
     }
@@ -911,7 +865,6 @@ function handleConversion() {
 
     if (!parseResult) {
         elements.confidenceBar.style.display = 'none';
-        elements.reportIssueLink.style.display = 'none';
         showResult(`
             <div style="color: #f59e0b; font-weight: 600; margin-bottom: 8px;">! No Time Information Detected</div>
             <div style="font-size: 13px; line-height: 1.4;">
@@ -1107,14 +1060,9 @@ function handleConversion() {
             showResult(resultHtml, 'success');
         }
 
-        // Wire up "Report Issue" mailto link
-        elements.reportIssueLink.href = buildReportMailto(inputText, parseResult, lastConversionText);
-        elements.reportIssueLink.target = '_blank';
-        elements.reportIssueLink.style.display = 'inline';
 
     } catch (error) {
         elements.confidenceBar.style.display = 'none';
-        elements.reportIssueLink.style.display = 'none';
         showResult(`
             <div style="color: #f87171; font-weight: 600; margin-bottom: 8px;">Error</div>
             <div style="font-size: 12px; opacity: 0.8;">${escapeHtml(error.message)}</div>
