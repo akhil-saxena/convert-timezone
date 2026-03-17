@@ -174,11 +174,37 @@ function getTimezoneOffsetMinutes(ianaZone) {
     }
 }
 
+// Well-known abbreviations that Intl returns as GMT+X instead
+const ABBREVIATION_OVERRIDE = {
+    'Asia/Shanghai': 'CST', 'Asia/Chongqing': 'CST', 'Asia/Harbin': 'CST',
+    'Asia/Calcutta': 'IST', 'Asia/Kolkata': 'IST',
+    'Asia/Tokyo': 'JST', 'Asia/Seoul': 'KST',
+    'Asia/Hong_Kong': 'HKT', 'Asia/Taipei': 'CST',
+    'Asia/Singapore': 'SGT', 'Asia/Kuala_Lumpur': 'MYT',
+    'Asia/Bangkok': 'ICT', 'Asia/Saigon': 'ICT', 'Asia/Ho_Chi_Minh': 'ICT',
+    'Asia/Jakarta': 'WIB', 'Asia/Makassar': 'WITA', 'Asia/Jayapura': 'WIT',
+    'Asia/Manila': 'PHT',
+    'Asia/Dubai': 'GST', 'Asia/Muscat': 'GST',
+    'Asia/Riyadh': 'AST', 'Asia/Qatar': 'AST', 'Asia/Kuwait': 'AST',
+    'Asia/Karachi': 'PKT', 'Asia/Dhaka': 'BST',
+    'Asia/Kathmandu': 'NPT', 'Asia/Rangoon': 'MMT', 'Asia/Yangon': 'MMT',
+    'Asia/Tehran': 'IRST', 'Asia/Baghdad': 'AST',
+    'Africa/Lagos': 'WAT', 'Africa/Nairobi': 'EAT',
+    'Africa/Johannesburg': 'SAST', 'Africa/Cairo': 'EET',
+    'Africa/Casablanca': 'WET',
+    'Europe/Moscow': 'MSK', 'Europe/Istanbul': 'TRT',
+    'America/Sao_Paulo': 'BRT', 'America/Argentina/Buenos_Aires': 'ART',
+    'America/Lima': 'PET', 'America/Bogota': 'COT',
+    'Pacific/Auckland': 'NZST', 'Pacific/Fiji': 'FJT',
+};
+
 /**
  * Get the short abbreviation (e.g. EST, IST, CET) for an IANA timezone
  */
 function getTimezoneAbbreviation(ianaZone) {
     if (ianaZone === 'UTC') return 'UTC';
+    // Use override if available (Intl often returns GMT+X for non-Western zones)
+    if (ABBREVIATION_OVERRIDE[ianaZone]) return ABBREVIATION_OVERRIDE[ianaZone];
     try {
         const now = new Date();
         const fmt = new Intl.DateTimeFormat('en-US', {
@@ -186,7 +212,9 @@ function getTimezoneAbbreviation(ianaZone) {
             timeZoneName: 'short'
         });
         const parts = fmt.formatToParts(now);
-        return parts.find(p => p.type === 'timeZoneName')?.value || '';
+        const abbr = parts.find(p => p.type === 'timeZoneName')?.value || '';
+        // If Intl still returns GMT+X format, return it as-is (no better option)
+        return abbr;
     } catch {
         return '';
     }
@@ -642,13 +670,51 @@ function renderSearchResults(query) {
         const matched = timezones.filter(matches);
         matched.sort((a, b) => relevanceScore(a) - relevanceScore(b) || a.city.localeCompare(b.city));
 
-        // Limit to 50 results for performance
-        const capped = matched.slice(0, 50);
-        if (capped.length > 0) {
+        // Group by offset+longName to collapse same-timezone results
+        const groups = [];
+        const seen = new Map(); // key: "offset|longName" → group index
+        for (const tz of matched) {
+            const key = `${tz.utcOffset}|${tz.longName}`;
+            if (seen.has(key)) {
+                groups[seen.get(key)].items.push(tz);
+            } else {
+                seen.set(key, groups.length);
+                groups.push({ primary: tz, items: [tz] });
+            }
+        }
+
+        // Limit groups to 30
+        const cappedGroups = groups.slice(0, 30);
+        if (cappedGroups.length > 0) {
             container.appendChild(createHeader('Results'));
-            capped.forEach(tz => {
-                container.appendChild(createResultItem(tz));
+            cappedGroups.forEach(group => {
+                // Always show the primary (best relevance)
+                container.appendChild(createResultItem(group.primary));
                 totalResults++;
+
+                if (group.items.length > 1) {
+                    // Create a "+N more" expander
+                    const extras = group.items.slice(1);
+                    const moreBtn = document.createElement('div');
+                    moreBtn.className = 'search-more-btn';
+                    moreBtn.textContent = `+${extras.length} more in ${group.primary.offsetString} · ${group.primary.longName}`;
+                    const moreContainer = document.createElement('div');
+                    moreContainer.className = 'search-more-items';
+                    moreContainer.style.display = 'none';
+                    extras.forEach(tz => {
+                        moreContainer.appendChild(createResultItem(tz));
+                        totalResults++;
+                    });
+                    moreBtn.addEventListener('click', function() {
+                        const isOpen = moreContainer.style.display !== 'none';
+                        moreContainer.style.display = isOpen ? 'none' : 'block';
+                        moreBtn.textContent = isOpen
+                            ? `+${extras.length} more in ${group.primary.offsetString} \u00B7 ${group.primary.longName}`
+                            : `\u25B4 Hide ${extras.length} zones`;
+                    });
+                    container.appendChild(moreBtn);
+                    container.appendChild(moreContainer);
+                }
             });
         }
     } else {
