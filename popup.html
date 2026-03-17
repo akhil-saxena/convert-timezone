@@ -5,294 +5,199 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TimeShift</title>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             width: 350px;
-            min-height: 520px;
+            min-height: 420px;
             margin: 0;
             padding: 16px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             overflow-y: auto;
-            box-sizing: border-box;
         }
-        
-        .header {
+
+        /* ---- Title ---- */
+        .title {
             text-align: center;
-            margin-bottom: 16px;
-        }
-        
-        .header h1 {
-            text-align: center;
-            margin-bottom: 16px;
             font-size: 22px;
-            font-weight: 600;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        }
-        
-        .header p {
-            margin: 5px 0 0 0;
-            font-size: 13px;
-            opacity: 0.8;
-        }
-        
-        .converter-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 16px;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            margin-bottom: 12px;
-            position: relative;
-            z-index: 1000;
-        }
-        
-        .input-group {
-            margin-bottom: 12px;
-            position: relative;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+            margin-bottom: 16px;
         }
 
-        .input-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 500;
-            font-size: 13px;
-            opacity: 0.9;
+        /* ---- Input row ---- */
+        .input-row {
+            position: relative;
+            margin-bottom: 14px;
         }
 
-        .input-group input {
+        .input-row input {
             width: 100%;
-            padding: 8px 36px 8px 12px;
+            height: 40px;
+            padding: 0 72px 0 14px;
             border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            font-size: 13px;
-            box-sizing: border-box;
-            height: 32px;
-            transition: all 0.2s ease;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #1f2937;
+            font-size: 14px;
+            outline: none;
+            transition: box-shadow 0.2s;
+        }
+
+        .input-row input:focus {
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .input-row input::placeholder {
+            color: #9ca3af;
         }
 
         .now-btn {
             position: absolute;
             right: 4px;
-            bottom: 2px;
-            width: 28px;
-            height: 28px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 32px;
+            padding: 0 12px;
             border: none;
-            border-radius: 6px;
-            background: transparent;
+            border-radius: 8px;
+            background: rgba(102, 126, 234, 0.12);
+            color: #667eea;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            opacity: 0.45;
-            transition: opacity 0.2s ease, background 0.2s ease;
+            transition: background 0.15s;
         }
 
         .now-btn:hover {
-            opacity: 0.75;
-            background: rgba(0, 0, 0, 0.06);
+            background: rgba(102, 126, 234, 0.22);
         }
 
-        .now-btn svg {
-            width: 16px;
-            height: 16px;
-        }
-        
-        .input-group input:hover {
-            background: rgba(255, 255, 255, 0.95);
-            transform: translateY(-1px);
-        }
-        
-        .timezone-group {
-            margin-bottom: 12px;
-        }
-        
-        .timezone-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 500;
-            font-size: 13px;
-            opacity: 0.9;
-        }
-        
-        .dropdown-container {
-            position: relative;
-            z-index: 10000;
-        }
-        
-        #fromTimezoneContainer {
-            z-index: 30000;
-        }
-        
-        #toTimezoneContainer {
-            z-index: 20000;
-        }
-        
-        .dropdown-trigger {
-            width: 100%;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            font-size: 13px;
-            box-sizing: border-box;
-            cursor: pointer;
+        /* ---- From/To pill row ---- */
+        .tz-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            min-height: 32px;
-            transition: all 0.2s ease;
-        }
-        
-        .dropdown-trigger:hover {
-            background: rgba(255, 255, 255, 0.95);
-            transform: translateY(-1px);
-        }
-        
-        .dropdown-arrow {
-            width: 0;
-            height: 0;
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-top: 6px solid #666;
-            transition: transform 0.2s ease;
-        }
-        
-        .dropdown-trigger.open .dropdown-arrow {
-            transform: rotate(180deg);
-        }
-        
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border-radius: 6px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            z-index: 99999;
-            max-height: 180px;
-            overflow-y: auto;
-            display: none;
-        }
-        
-        .dropdown-menu.open {
-            display: block;
-        }
-        
-        #fromTimezoneMenu {
-            z-index: 30001;
-        }
-        
-        #toTimezoneMenu {
-            z-index: 20001;
-        }
-        
-        .dropdown-search {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 30002;
-        }
-        
-        .dropdown-search input {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 13px;
-            box-sizing: border-box;
-        }
-        
-        .dropdown-options {
-            max-height: 140px;
-            overflow-y: auto;
-        }
-        
-        .dropdown-option {
-            padding: 8px 12px;
-            color: #333;
-            cursor: pointer;
-            font-size: 13px;
-            border-bottom: 1px solid #f5f5f5;
-            transition: background-color 0.1s ease;
+            gap: 8px;
+            margin-bottom: 14px;
         }
 
-        .dropdown-option .tz-long-name {
-            display: block;
-            font-size: 11px;
-            color: #888;
-            margin-top: 1px;
-        }
-        
-        .dropdown-option:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .dropdown-option:last-child {
-            border-bottom: none;
-        }
-        
-        .dropdown-option.special {
+        .tz-pill {
+            flex: 1;
+            min-width: 0;
             padding: 10px 12px;
-            font-weight: 500;
-            color: #333;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .dropdown-group-header {
-            padding: 6px 12px;
-            background-color: #f0f1f3;
-            color: #6b7280;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            border-top: 1px solid #e5e7eb;
-            border-bottom: 1px solid #e5e7eb;
-            cursor: default;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
             user-select: none;
         }
 
-        .dropdown-group-header:first-child {
-            border-top: none;
+        .tz-pill:hover {
+            background: rgba(255, 255, 255, 0.22);
+            border-color: rgba(255, 255, 255, 0.35);
         }
 
-        .dropdown-separator {
-            padding: 8px 12px;
-            background-color: #f8f9fa;
-            color: #666;
-            font-size: 12px;
+        .tz-pill-label {
+            font-size: 9px;
             font-weight: 600;
-            border-top: 1px solid #e9ecef;
-            border-bottom: 1px solid #e9ecef;
-            margin: 2px 0;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
+            opacity: 0.6;
+            margin-bottom: 3px;
         }
-        
-        .dropdown-separator.first-region {
-            border-top: none;
-            margin-top: 0;
+
+        .tz-pill-line1 {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        
-        .region-label {
+
+        .tz-pill-line2 {
             font-size: 11px;
-            font-weight: 700;
-            color: #495057;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            opacity: 0.55;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        
+
+        .tz-arrow {
+            flex-shrink: 0;
+            font-size: 16px;
+            opacity: 0.5;
+        }
+
+        /* ---- Result area ---- */
+        .result-area {
+            display: none;
+            text-align: center;
+            padding: 16px 14px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .result-area.show {
+            display: block;
+        }
+
+        .result-area.error {
+            background: rgba(248, 113, 113, 0.12);
+            border-color: rgba(248, 113, 113, 0.3);
+        }
+
+        .result-converted-time {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 2px;
+        }
+
+        .result-date {
+            font-size: 13px;
+            opacity: 0.75;
+            margin-bottom: 6px;
+        }
+
+        .result-tz-name {
+            font-size: 11px;
+            opacity: 0.55;
+            margin-bottom: 10px;
+        }
+
+        .result-original {
+            font-size: 12px;
+            opacity: 0.6;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .result-original-time {
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        .result-range-time {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            margin-bottom: 2px;
+        }
+
         .copy-btn {
             position: absolute;
             top: 10px;
@@ -305,7 +210,7 @@
             padding: 4px 8px;
             font-size: 11px;
             line-height: 1;
-            transition: all 0.2s ease;
+            transition: all 0.15s;
             display: none;
         }
 
@@ -325,108 +230,202 @@
             height: 12px;
         }
 
-        .btn {
-            width: 100%;
-            padding: 10px;
-            margin-top: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            margin-bottom: 15px;
-        }
-        
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-        
-        .result {
-            position: relative;
-            margin-bottom: 12px;
-            padding: 12px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(15px);
-            font-size: 13px;
-            line-height: 1.4;
+        /* ---- Confidence text ---- */
+        .confidence-text {
             display: none;
+            text-align: center;
+            font-size: 11px;
+            opacity: 0.55;
+            padding: 0 8px 8px;
         }
-        
-        .result.show {
+
+        .confidence-text.show {
             display: block;
         }
-        
-        .result.error {
-            background: rgba(248, 113, 113, 0.1);
-            border-color: rgba(248, 113, 113, 0.3);
-        }
-        
-        .instructions {
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 12px;
-            margin-top: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            z-index: -1;
-        }
-        
-        .instructions h3 {
-            margin: 0 0 8px 0;
-            font-size: 14px;
+
+        /* ---- Error/info messages inside result ---- */
+        .result-error-title {
+            color: #fbbf24;
             font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
         }
 
-        .instructions p {
-            margin: 0;
-            font-size: 12px;
+        .result-error-body {
+            font-size: 13px;
+            line-height: 1.5;
+            text-align: left;
             opacity: 0.85;
-            line-height: 1.4;
         }
 
-        .confidence-bar {
-            background: rgba(245, 158, 11, 0.15);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            border-radius: 8px;
-            padding: 8px 12px;
-            margin: 8px 0;
+        /* ---- Search panel overlay ---- */
+        .search-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.97);
+            z-index: 9999;
+            flex-direction: column;
+            color: #1f2937;
+        }
+
+        .search-panel.open {
+            display: flex;
+        }
+
+        .search-panel-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 12px;
-            color: #f59e0b;
-        }
-        .confidence-change-btn {
-            background: rgba(245, 158, 11, 0.2);
-            border: 1px solid rgba(245, 158, 11, 0.4);
-            border-radius: 4px;
-            color: #f59e0b;
-            padding: 2px 8px;
-            cursor: pointer;
-            font-size: 11px;
-        }
-        .confidence-change-btn:hover {
-            background: rgba(245, 158, 11, 0.3);
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #e5e7eb;
         }
 
+        .search-panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6b7280;
+        }
+
+        .search-panel-close {
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            background: #f3f4f6;
+            color: #6b7280;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+
+        .search-panel-close:hover {
+            background: #e5e7eb;
+        }
+
+        .search-panel-input-wrap {
+            padding: 10px 16px;
+        }
+
+        .search-panel-input {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #1f2937;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .search-panel-input:focus {
+            border-color: #667eea;
+        }
+
+        .search-panel-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .search-panel-results {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 12px;
+        }
+
+        .search-group-header {
+            padding: 6px 16px;
+            background: #f9fafb;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #9ca3af;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .search-result-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.1s;
+        }
+
+        .search-result-item:hover {
+            background: #f3f4f6;
+        }
+
+        .search-result-line1 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .search-result-line1 .offset {
+            font-weight: 400;
+            color: #9ca3af;
+            margin-left: 4px;
+        }
+
+        .search-result-line2 {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 1px;
+        }
+
+        .search-result-line1 mark {
+            background: rgba(102, 126, 234, 0.18);
+            color: inherit;
+            border-radius: 2px;
+            padding: 0 1px;
+        }
+
+        .search-result-line2 mark {
+            background: rgba(102, 126, 234, 0.12);
+            color: inherit;
+            border-radius: 2px;
+            padding: 0 1px;
+        }
+
+        .search-no-results {
+            padding: 24px 16px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>TimeShift</h1>
-        <p>Convert time across global timezones instantly</p>
+    <h1 class="title">TimeShift</h1>
+
+    <div class="input-row">
+        <input type="text" id="dateTimeInput" placeholder="Enter date/time..." autocomplete="off">
+        <button class="now-btn" id="nowBtn" title="Fill current time">Now</button>
     </div>
 
-    <div class="result" id="result">
+    <div class="tz-row">
+        <div class="tz-pill" id="fromPill" role="button" tabindex="0" aria-label="Select source timezone">
+            <div class="tz-pill-label">From</div>
+            <div class="tz-pill-line1" id="fromLine1">Auto-detect</div>
+            <div class="tz-pill-line2" id="fromLine2">&nbsp;</div>
+        </div>
+        <span class="tz-arrow" aria-hidden="true">&rarr;</span>
+        <div class="tz-pill" id="toPill" role="button" tabindex="0" aria-label="Select target timezone">
+            <div class="tz-pill-label">To</div>
+            <div class="tz-pill-line1" id="toLine1">Auto-detect</div>
+            <div class="tz-pill-line2" id="toLine2">&nbsp;</div>
+        </div>
+    </div>
+
+    <div class="result-area" id="resultArea">
         <button class="copy-btn" id="copyBtn" title="Copy result">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="5" y="5" width="9" height="9" rx="1.5"/>
@@ -434,65 +433,23 @@
             </svg>
             <span id="copyBtnText">Copy</span>
         </button>
+        <div id="resultContent"></div>
     </div>
 
-    <div id="confidenceBar" class="confidence-bar" style="display: none;">
-        <span id="confidenceText"></span>
-        <button id="confidenceChangeBtn" class="confidence-change-btn">Change &#9662;</button>
+    <div class="confidence-text" id="confidenceText"></div>
+
+    <!-- Timezone search panel overlay -->
+    <div class="search-panel" id="searchPanel" role="dialog" aria-modal="true" aria-label="Select timezone">
+        <div class="search-panel-header">
+            <span class="search-panel-title" id="searchPanelTitle">SELECT TIMEZONE</span>
+            <button class="search-panel-close" id="searchPanelClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="search-panel-input-wrap">
+            <input type="text" class="search-panel-input" id="searchPanelInput" placeholder="Search city, country, timezone..." autocomplete="off">
+        </div>
+        <div class="search-panel-results" id="searchPanelResults"></div>
     </div>
 
-    <div class="converter-section">
-        <div class="input-group">
-            <label for="dateTimeInput">Enter Date/Time:</label>
-            <input type="text" id="dateTimeInput" placeholder="e.g., Tuesday, Sep 2, 2025 12:00 PM">
-            <button class="now-btn" id="nowBtn" title="Fill current time">
-                <svg viewBox="0 0 16 16" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="8" cy="8" r="6.5"/>
-                    <polyline points="8,4 8,8 11,10"/>
-                </svg>
-            </button>
-        </div>
-        
-        <div class="timezone-group">
-            <label>From Timezone:</label>
-            <div class="dropdown-container" id="fromTimezoneContainer">
-                <div class="dropdown-trigger" id="fromTimezoneDropdown">
-                    <span class="selected-text">Auto-detect</span>
-                    <div class="dropdown-arrow"></div>
-                </div>
-                <div class="dropdown-menu" id="fromTimezoneMenu">
-                    <div class="dropdown-search">
-                        <input type="text" placeholder="Search country, city or timezone..." id="fromTimezoneSearch">
-                    </div>
-                    <div class="dropdown-options" id="fromTimezoneOptions"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="timezone-group">
-            <label>To Timezone:</label>
-            <div class="dropdown-container" id="toTimezoneContainer">
-                <div class="dropdown-trigger" id="toTimezoneDropdown">
-                    <span class="selected-text">Auto-detect</span>
-                    <div class="dropdown-arrow"></div>
-                </div>
-                <div class="dropdown-menu" id="toTimezoneMenu">
-                    <div class="dropdown-search">
-                        <input type="text" placeholder="Search country, city or timezone..." id="toTimezoneSearch">
-                    </div>
-                    <div class="dropdown-options" id="toTimezoneOptions"></div>
-                </div>
-            </div>
-        </div>
-        
-        <button class="btn" id="convertBtn">Convert Time</button>
-    </div>
-    
-    <div class="instructions">
-        <h3>How to Use</h3>
-        <p>Right-click on any date/time text on websites and select "Convert Time" from the context menu, or use this popup for manual conversion.</p>
-    </div>
-    
     <script src="libs/chrono.bundle.js"></script>
     <script src="popup.js"></script>
 </body>

@@ -1,166 +1,57 @@
 /**
- * Popup Script for Convert Timezone Chrome Extension
- * Handles the popup interface with timezone dropdowns and conversion functionality
- * Uses TimeShiftParser (chrono-based) + native Intl APIs instead of moment.js
+ * Popup Script for TimeShift Chrome Extension
+ * v2 UI — glassmorphism with pills, search panel, auto-convert
+ *
+ * Keeps all parsing integration (TimeShiftParser), Intl utilities, and data maps unchanged.
+ * Rewrites: UI rendering, timezone selection (search panel), auto-convert, result display.
  */
 
-// Global variables
+// ============================================================
+// Global state
+// ============================================================
+
 let timezones = [];
 let selectedFromTimezone = null;
 let selectedToTimezone = null;
 let userTimezone = null;
 let lastConversionText = '';
+let recentTimezones = [];
 
-// DOM elements
-const elements = {
-    dateTimeInput: null,
-    convertBtn: null,
-    result: null,
-    fromTimezoneDropdown: null,
-    fromTimezoneMenu: null,
-    fromTimezoneSearch: null,
-    fromTimezoneOptions: null,
-    toTimezoneDropdown: null,
-    toTimezoneMenu: null,
-    toTimezoneSearch: null,
-    toTimezoneOptions: null,
-    nowBtn: null,
-    copyBtn: null,
-    copyBtnText: null,
-    confidenceBar: null,
-    confidenceText: null,
-    confidenceChangeBtn: null,
-};
+// Which pill opened the search panel: 'from' | 'to' | null
+let searchPanelTarget = null;
 
-/**
- * Initialize popup when DOM is loaded
- */
-document.addEventListener('DOMContentLoaded', async function() {
-    initializeElements();
-    detectUserTimezone();
+// Debounce timer for auto-convert
+let autoConvertTimer = null;
 
-    // Load recent timezones before initializing dropdowns
-    await loadRecentTimezones();
-    initializeTimezones();
-    setupEventListeners();
+// ============================================================
+// DOM element cache
+// ============================================================
 
-    // Load saved timezone preferences
-    await loadTimezonePreferences();
+const el = {};
 
-    // Check if opened from context menu
-    checkForContextMenuText();
-
-    // Smart placeholder — show current time as hint
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    elements.dateTimeInput.placeholder = `e.g., ${timeStr} (now)`;
-});
-
-/**
- * Initialize DOM element references
- */
 function initializeElements() {
-    elements.dateTimeInput = document.getElementById('dateTimeInput');
-    elements.convertBtn = document.getElementById('convertBtn');
-    elements.result = document.getElementById('result');
-    elements.fromTimezoneDropdown = document.getElementById('fromTimezoneDropdown');
-    elements.fromTimezoneMenu = document.getElementById('fromTimezoneMenu');
-    elements.fromTimezoneSearch = document.getElementById('fromTimezoneSearch');
-    elements.fromTimezoneOptions = document.getElementById('fromTimezoneOptions');
-    elements.toTimezoneDropdown = document.getElementById('toTimezoneDropdown');
-    elements.toTimezoneMenu = document.getElementById('toTimezoneMenu');
-    elements.toTimezoneSearch = document.getElementById('toTimezoneSearch');
-    elements.toTimezoneOptions = document.getElementById('toTimezoneOptions');
-    elements.nowBtn = document.getElementById('nowBtn');
-    elements.copyBtn = document.getElementById('copyBtn');
-    elements.copyBtnText = document.getElementById('copyBtnText');
-    elements.confidenceBar = document.getElementById('confidenceBar');
-    elements.confidenceText = document.getElementById('confidenceText');
-    elements.confidenceChangeBtn = document.getElementById('confidenceChangeBtn');
-}
-
-/**
- * Setup event listeners
- */
-function setupEventListeners() {
-    // Convert button
-    elements.convertBtn.addEventListener('click', handleConversion);
-
-    // Enter key in input field
-    elements.dateTimeInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            handleConversion();
-        }
-    });
-
-    // Clear result when input changes
-    elements.dateTimeInput.addEventListener('input', function() {
-        elements.result.classList.remove('show');
-        elements.confidenceBar.style.display = 'none';
-    });
-
-    // From timezone dropdown
-    elements.fromTimezoneDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleDropdown('from');
-    });
-
-    // To timezone dropdown
-    elements.toTimezoneDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleDropdown('to');
-    });
-
-    // Search functionality
-    elements.fromTimezoneSearch.addEventListener('input', function() {
-        filterTimezones('from', this.value);
-    });
-
-    elements.toTimezoneSearch.addEventListener('input', function() {
-        filterTimezones('to', this.value);
-    });
-
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function() {
-        closeAllDropdowns();
-    });
-
-    // Prevent dropdown from closing when clicking inside
-    elements.fromTimezoneMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-
-    elements.toTimezoneMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-
-    // Now button — fill input with current time
-    elements.nowBtn.addEventListener('click', function() {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-        elements.dateTimeInput.value = timeStr;
-        handleConversion();
-    });
-
-    // Confidence "Change" button — opens the From timezone dropdown
-    elements.confidenceChangeBtn.addEventListener('click', function() {
-        toggleDropdown('from');
-    });
-
-    // Copy button — copy last conversion text to clipboard
-    elements.copyBtn.addEventListener('click', function() {
-        if (!lastConversionText) return;
-        navigator.clipboard.writeText(lastConversionText).then(() => {
-            elements.copyBtnText.textContent = 'Copied!';
-            setTimeout(() => {
-                elements.copyBtnText.textContent = 'Copy';
-            }, 1500);
-        });
-    });
+    el.dateTimeInput = document.getElementById('dateTimeInput');
+    el.nowBtn = document.getElementById('nowBtn');
+    el.fromPill = document.getElementById('fromPill');
+    el.fromLine1 = document.getElementById('fromLine1');
+    el.fromLine2 = document.getElementById('fromLine2');
+    el.toPill = document.getElementById('toPill');
+    el.toLine1 = document.getElementById('toLine1');
+    el.toLine2 = document.getElementById('toLine2');
+    el.resultArea = document.getElementById('resultArea');
+    el.resultContent = document.getElementById('resultContent');
+    el.copyBtn = document.getElementById('copyBtn');
+    el.copyBtnText = document.getElementById('copyBtnText');
+    el.confidenceText = document.getElementById('confidenceText');
+    el.searchPanel = document.getElementById('searchPanel');
+    el.searchPanelTitle = document.getElementById('searchPanelTitle');
+    el.searchPanelClose = document.getElementById('searchPanelClose');
+    el.searchPanelInput = document.getElementById('searchPanelInput');
+    el.searchPanelResults = document.getElementById('searchPanelResults');
 }
 
 // ============================================================
-// Country search map — lets users type country names to find zones
+// Country search map
 // ============================================================
 
 const COUNTRY_SEARCH_MAP = {
@@ -224,17 +115,14 @@ const COUNTRY_SEARCH_MAP = {
 };
 
 // ============================================================
-// Intl-based timezone utilities
+// Intl-based timezone utilities (kept from v1)
 // ============================================================
 
 /**
- * Build a human-readable display name for an IANA timezone using Intl APIs
- */
-/**
  * Build timezone info for display.
  * Returns { displayName, longName } where:
- *   displayName = "Chicago (UTC-05:00)" — shown in dropdown trigger + result labels
- *   longName = "Central Standard Time" — shown as second line in dropdown options
+ *   displayName = "Chicago (UTC-05:00)"
+ *   longName = "Central Standard Time"
  */
 function buildTimezoneInfo(ianaZone) {
     if (ianaZone === 'UTC') return {
@@ -243,7 +131,6 @@ function buildTimezoneInfo(ianaZone) {
     };
     try {
         const now = new Date();
-        // Offset like "GMT-04:00" → "UTC-04:00"
         const offsetFormatter = new Intl.DateTimeFormat('en-US', {
             timeZone: ianaZone, timeZoneName: 'longOffset'
         });
@@ -251,7 +138,6 @@ function buildTimezoneInfo(ianaZone) {
             .find(p => p.type === 'timeZoneName')?.value || '';
         const utcOffset = offsetStr.replace('GMT', 'UTC');
 
-        // Long timezone name like "Central Standard Time"
         const longFormatter = new Intl.DateTimeFormat('en-US', {
             timeZone: ianaZone, timeZoneName: 'long'
         });
@@ -288,11 +174,39 @@ function getTimezoneOffsetMinutes(ianaZone) {
 }
 
 /**
- * Detect user's timezone using Intl
+ * Get the short abbreviation (e.g. EST, IST, CET) for an IANA timezone
  */
+function getTimezoneAbbreviation(ianaZone) {
+    if (ianaZone === 'UTC') return 'UTC';
+    try {
+        const now = new Date();
+        const fmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: ianaZone,
+            timeZoneName: 'short'
+        });
+        const parts = fmt.formatToParts(now);
+        return parts.find(p => p.type === 'timeZoneName')?.value || '';
+    } catch {
+        return '';
+    }
+}
+
 /**
- * Map legacy IANA timezone names to modern equivalents in our curated list.
+ * Format UTC offset minutes as a string like "UTC-05:00" or "UTC+05:30"
  */
+function formatOffsetString(minutes) {
+    if (minutes === 0) return 'UTC+00:00';
+    const sign = minutes >= 0 ? '+' : '-';
+    const abs = Math.abs(minutes);
+    const h = String(Math.floor(abs / 60)).padStart(2, '0');
+    const m = String(abs % 60).padStart(2, '0');
+    return `UTC${sign}${h}:${m}`;
+}
+
+// ============================================================
+// Legacy timezone map
+// ============================================================
+
 const LEGACY_TIMEZONE_MAP = {
     'Asia/Calcutta': 'Asia/Kolkata',
     'America/Montreal': 'America/Toronto',
@@ -309,7 +223,6 @@ const LEGACY_TIMEZONE_MAP = {
 function detectUserTimezone() {
     try {
         let detected = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-        // Map legacy IANA names to modern equivalents
         userTimezone = LEGACY_TIMEZONE_MAP[detected] || detected;
     } catch {
         userTimezone = 'UTC';
@@ -317,45 +230,9 @@ function detectUserTimezone() {
 }
 
 // ============================================================
-// Timezone initialization — full IANA from Intl.supportedValuesOf
+// City aliases
 // ============================================================
 
-/**
- * Map IANA prefix to continent/region group name
- */
-function getRegionGroup(ianaName) {
-    if (ianaName === 'UTC') return 'UTC';
-    const prefix = ianaName.split('/')[0];
-    switch (prefix) {
-        case 'America': return 'Americas';
-        case 'Europe': return 'Europe';
-        case 'Asia': return 'Asia';
-        case 'Africa': return 'Africa';
-        case 'Australia': return 'Australia/Oceania';
-        case 'Pacific': return 'Pacific';
-        case 'Indian': return 'Indian Ocean';
-        case 'Atlantic': return 'Atlantic';
-        case 'Arctic': return 'Arctic';
-        case 'Antarctica': return 'Antarctica';
-        default: return 'Other';
-    }
-}
-
-/**
- * Ordered list of region groups for display
- */
-const REGION_ORDER = [
-    'UTC', 'Americas', 'Europe', 'Asia', 'Africa',
-    'Australia/Oceania', 'Pacific', 'Indian Ocean', 'Atlantic', 'Arctic', 'Antarctica', 'Other'
-];
-
-/**
- * Generate full timezone list from all IANA zones via Intl.supportedValuesOf
- */
-/**
- * Common city aliases and search terms for IANA zones.
- * Helps users find zones by familiar city names that aren't in the IANA identifier.
- */
 const CITY_ALIASES = {
     'Asia/Kolkata': 'mumbai bombay delhi bangalore chennai hyderabad india calcutta',
     'Asia/Shanghai': 'beijing china shenzhen guangzhou',
@@ -412,12 +289,42 @@ function getCityAliases(zoneName) {
     return CITY_ALIASES[zoneName] || '';
 }
 
+// ============================================================
+// Region grouping
+// ============================================================
+
+function getRegionGroup(ianaName) {
+    if (ianaName === 'UTC') return 'UTC';
+    const prefix = ianaName.split('/')[0];
+    switch (prefix) {
+        case 'America': return 'Americas';
+        case 'Europe': return 'Europe';
+        case 'Asia': return 'Asia';
+        case 'Africa': return 'Africa';
+        case 'Australia': return 'Australia/Oceania';
+        case 'Pacific': return 'Pacific';
+        case 'Indian': return 'Indian Ocean';
+        case 'Atlantic': return 'Atlantic';
+        case 'Arctic': return 'Arctic';
+        case 'Antarctica': return 'Antarctica';
+        default: return 'Other';
+    }
+}
+
+const REGION_ORDER = [
+    'UTC', 'Americas', 'Europe', 'Asia', 'Africa',
+    'Australia/Oceania', 'Pacific', 'Indian Ocean', 'Atlantic', 'Arctic', 'Antarctica', 'Other'
+];
+
+// ============================================================
+// Timezone data generation
+// ============================================================
+
 function generateAllTimezones() {
     let allZones;
     try {
         allZones = Intl.supportedValuesOf('timeZone');
     } catch {
-        // Fallback for older environments — return a minimal set
         allZones = [
             'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
             'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
@@ -426,7 +333,6 @@ function generateAllTimezones() {
         ];
     }
 
-    // Always ensure UTC is included
     if (!allZones.includes('UTC')) {
         allZones.unshift('UTC');
     }
@@ -436,9 +342,11 @@ function generateAllTimezones() {
         try {
             const { displayName, longName } = buildTimezoneInfo(zoneName);
             const utcOffset = getTimezoneOffsetMinutes(zoneName);
+            const abbreviation = getTimezoneAbbreviation(zoneName);
             const parts = zoneName.split('/');
             const city = parts[parts.length - 1].replace(/_/g, ' ');
             const region = getRegionGroup(zoneName);
+            const offsetStr = formatOffsetString(utcOffset);
 
             result.push({
                 name: zoneName,
@@ -446,7 +354,9 @@ function generateAllTimezones() {
                 region: region,
                 displayName: displayName,
                 longName: longName,
-                searchText: `${zoneName} ${city} ${region} ${displayName} ${longName} ${getCityAliases(zoneName)}`.toLowerCase(),
+                abbreviation: abbreviation,
+                offsetString: offsetStr,
+                searchText: `${zoneName} ${city} ${region} ${displayName} ${longName} ${abbreviation} ${offsetStr} ${getCityAliases(zoneName)}`.toLowerCase(),
                 utcOffset: utcOffset
             });
         } catch {
@@ -457,9 +367,6 @@ function generateAllTimezones() {
     return result;
 }
 
-/**
- * Initialize timezone data from all IANA zones with dynamic Intl-computed display names
- */
 function initializeTimezones() {
     timezones = generateAllTimezones();
 
@@ -471,23 +378,12 @@ function initializeTimezones() {
         if (a.utcOffset !== b.utcOffset) return a.utcOffset - b.utcOffset;
         return a.city.localeCompare(b.city);
     });
-
-    populateTimezoneOptions();
 }
 
 // ============================================================
-// Dropdown population, filtering, selection (kept as-is)
+// Recent timezones (chrome.storage.local)
 // ============================================================
 
-// ============================================================
-// Recent timezones — stored in chrome.storage.local
-// ============================================================
-
-let recentTimezones = [];
-
-/**
- * Load recent timezones from storage
- */
 async function loadRecentTimezones() {
     try {
         const result = await chrome.storage.local.get('recentTimezones');
@@ -497,9 +393,6 @@ async function loadRecentTimezones() {
     }
 }
 
-/**
- * Add a timezone to the recents list (max 5, deduped)
- */
 async function addToRecentTimezones(timezoneName) {
     if (!timezoneName || timezoneName === 'UTC') return;
     recentTimezones = recentTimezones.filter(tz => tz !== timezoneName);
@@ -513,186 +406,9 @@ async function addToRecentTimezones(timezoneName) {
 }
 
 // ============================================================
-// Dropdown population with continent grouping and recents
+// Timezone preferences (chrome.storage.local)
 // ============================================================
 
-/**
- * Create a timezone option element
- */
-function createTimezoneOption(timezone, type) {
-    const option = document.createElement('div');
-    option.className = 'dropdown-option';
-    option.innerHTML = `${escapeHtml(timezone.displayName)}${timezone.longName ? `<span class="tz-long-name">${escapeHtml(timezone.longName)}</span>` : ''}`;
-    option.dataset.timezone = timezone.name;
-    option.dataset.searchtext = timezone.searchText;
-    option.addEventListener('click', function() {
-        selectTimezone(type, timezone.name, timezone.displayName);
-    });
-    return option;
-}
-
-/**
- * Create a group header element
- */
-function createGroupHeader(label) {
-    const header = document.createElement('div');
-    header.className = 'dropdown-group-header';
-    header.textContent = label;
-    return header;
-}
-
-/**
- * Populate timezone dropdown options with continent groups and recents
- */
-function populateTimezoneOptions() {
-    elements.fromTimezoneOptions.innerHTML = '';
-    elements.toTimezoneOptions.innerHTML = '';
-
-    // Add auto-detect option for "to" timezone
-    const autoDetectOption = document.createElement('div');
-    autoDetectOption.className = 'dropdown-option special';
-    autoDetectOption.textContent = 'Auto-detect';
-    autoDetectOption.addEventListener('click', function() {
-        selectTimezone('to', null, 'Auto-detect');
-    });
-    elements.toTimezoneOptions.appendChild(autoDetectOption);
-
-    // Add recent timezones section if any exist
-    if (recentTimezones.length > 0) {
-        const recentZones = recentTimezones
-            .map(name => timezones.find(tz => tz.name === name))
-            .filter(Boolean);
-
-        if (recentZones.length > 0) {
-            const fromRecentHeader = createGroupHeader('\u2605 Recent');
-            const toRecentHeader = createGroupHeader('\u2605 Recent');
-            elements.fromTimezoneOptions.appendChild(fromRecentHeader);
-            elements.toTimezoneOptions.appendChild(toRecentHeader);
-
-            recentZones.forEach(tz => {
-                elements.fromTimezoneOptions.appendChild(createTimezoneOption(tz, 'from'));
-                elements.toTimezoneOptions.appendChild(createTimezoneOption(tz, 'to'));
-            });
-        }
-    }
-
-    // Group timezones by region and add with headers
-    let currentRegion = null;
-    timezones.forEach(timezone => {
-        if (timezone.region !== currentRegion) {
-            currentRegion = timezone.region;
-            const fromHeader = createGroupHeader(currentRegion);
-            const toHeader = createGroupHeader(currentRegion);
-            elements.fromTimezoneOptions.appendChild(fromHeader);
-            elements.toTimezoneOptions.appendChild(toHeader);
-        }
-
-        elements.fromTimezoneOptions.appendChild(createTimezoneOption(timezone, 'from'));
-        elements.toTimezoneOptions.appendChild(createTimezoneOption(timezone, 'to'));
-    });
-}
-
-/**
- * Filter timezones based on search query, including country name matching
- */
-function filterTimezones(type, query) {
-    const optionsContainer = type === 'from' ? elements.fromTimezoneOptions : elements.toTimezoneOptions;
-    const allChildren = optionsContainer.children;
-
-    query = query.toLowerCase().trim();
-
-    // Build a set of timezone names that match via country search
-    const countryMatchZones = new Set();
-    if (query) {
-        for (const [country, zones] of Object.entries(COUNTRY_SEARCH_MAP)) {
-            if (country.includes(query)) {
-                zones.forEach(z => countryMatchZones.add(z.toLowerCase()));
-            }
-        }
-    }
-
-    let anyVisibleInGroup = false;
-    let lastHeader = null;
-
-    for (let i = 0; i < allChildren.length; i++) {
-        const child = allChildren[i];
-
-        if (child.classList.contains('dropdown-group-header')) {
-            // If we had a previous header with no visible options, hide it
-            if (lastHeader && !anyVisibleInGroup) {
-                lastHeader.style.display = 'none';
-            }
-            lastHeader = child;
-            anyVisibleInGroup = false;
-            // Tentatively show the header; we'll hide it if no children match
-            child.style.display = query === '' ? '' : 'none';
-            continue;
-        }
-
-        if (child.classList.contains('special')) {
-            child.style.display = '';
-            continue;
-        }
-
-        if (query === '') {
-            child.style.display = '';
-            anyVisibleInGroup = true;
-            if (lastHeader) lastHeader.style.display = '';
-            continue;
-        }
-
-        const searchText = child.dataset.searchtext || child.textContent.toLowerCase();
-        const tzName = (child.dataset.timezone || '').toLowerCase();
-        const isMatch = searchText.includes(query) || tzName.includes(query) || countryMatchZones.has(tzName);
-
-        child.style.display = isMatch ? '' : 'none';
-        if (isMatch) {
-            anyVisibleInGroup = true;
-            if (lastHeader) lastHeader.style.display = '';
-        }
-    }
-
-    // Handle the last group header
-    if (lastHeader && !anyVisibleInGroup && query !== '') {
-        lastHeader.style.display = 'none';
-    }
-}
-
-/**
- * Toggle dropdown open/close
- */
-function toggleDropdown(type) {
-    const dropdown = type === 'from' ? elements.fromTimezoneDropdown : elements.toTimezoneDropdown;
-    const menu = type === 'from' ? elements.fromTimezoneMenu : elements.toTimezoneMenu;
-    const search = type === 'from' ? elements.fromTimezoneSearch : elements.toTimezoneSearch;
-
-    const isOpen = dropdown.classList.contains('open');
-
-    // Close all dropdowns first
-    closeAllDropdowns();
-
-    if (!isOpen) {
-        dropdown.classList.add('open');
-        menu.classList.add('open');
-        search.focus();
-        search.value = '';
-        filterTimezones(type, '');
-    }
-}
-
-/**
- * Close all dropdowns
- */
-function closeAllDropdowns() {
-    elements.fromTimezoneDropdown.classList.remove('open');
-    elements.fromTimezoneMenu.classList.remove('open');
-    elements.toTimezoneDropdown.classList.remove('open');
-    elements.toTimezoneMenu.classList.remove('open');
-}
-
-/**
- * Save timezone preferences to storage
- */
 async function saveTimezonePreferences() {
     try {
         await chrome.storage.local.set({
@@ -700,14 +416,11 @@ async function saveTimezonePreferences() {
             'preferredToTimezone': selectedToTimezone,
             'timezonePrefsTimestamp': Date.now()
         });
-    } catch (error) {
-        // Silent fail for preferences save
+    } catch {
+        // Silent fail
     }
 }
 
-/**
- * Load timezone preferences from storage
- */
 async function loadTimezonePreferences() {
     try {
         const result = await chrome.storage.local.get([
@@ -716,68 +429,229 @@ async function loadTimezonePreferences() {
             'timezonePrefsTimestamp'
         ]);
 
-        // Only load preferences if they were saved recently (within 30 days)
         const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
         if (result.timezonePrefsTimestamp && result.timezonePrefsTimestamp > thirtyDaysAgo) {
-            // Restore "From" timezone if available and valid
             if (result.preferredFromTimezone) {
-                const fromTimezoneObj = timezones.find(tz => tz.name === result.preferredFromTimezone);
-                if (fromTimezoneObj) {
+                const fromTz = timezones.find(tz => tz.name === result.preferredFromTimezone);
+                if (fromTz) {
                     selectedFromTimezone = result.preferredFromTimezone;
-                    elements.fromTimezoneDropdown.querySelector('.selected-text').textContent = fromTimezoneObj.displayName;
+                    updatePillDisplay('from', fromTz);
                 }
             }
 
-            // Restore "To" timezone if available and valid
             if (result.preferredToTimezone) {
-                const toTimezoneObj = timezones.find(tz => tz.name === result.preferredToTimezone);
-                if (toTimezoneObj) {
+                const toTz = timezones.find(tz => tz.name === result.preferredToTimezone);
+                if (toTz) {
                     selectedToTimezone = result.preferredToTimezone;
-                    elements.toTimezoneDropdown.querySelector('.selected-text').textContent = toTimezoneObj.displayName;
+                    updatePillDisplay('to', toTz);
                 } else if (result.preferredToTimezone === null) {
-                    // Handle auto-detect case
                     selectedToTimezone = null;
-                    elements.toTimezoneDropdown.querySelector('.selected-text').textContent = 'Auto-detect';
+                    updatePillDisplay('to', null);
                 }
             }
         }
-    } catch (error) {
-        // Silent fail for preferences load
+    } catch {
+        // Silent fail
     }
 }
 
+// ============================================================
+// Pill display
+// ============================================================
+
 /**
- * Select a timezone
+ * Update a timezone pill's display text.
+ * @param {'from'|'to'} type
+ * @param {object|null} tzObj — timezone object from the timezones array, or null for auto-detect
+ * @param {string} [overrideLine1] — optional override for line 1 (e.g. explicit offset display)
+ * @param {string} [overrideLine2]
  */
-function selectTimezone(type, timezoneName, displayName) {
+function updatePillDisplay(type, tzObj, overrideLine1, overrideLine2) {
+    const line1El = type === 'from' ? el.fromLine1 : el.toLine1;
+    const line2El = type === 'from' ? el.fromLine2 : el.toLine2;
+
+    if (!tzObj) {
+        line1El.textContent = 'Auto-detect';
+        line2El.innerHTML = '&nbsp;';
+        return;
+    }
+
+    line1El.textContent = overrideLine1 || `${tzObj.abbreviation} \u00B7 ${tzObj.city}`;
+    line2El.textContent = overrideLine2 || tzObj.offsetString;
+}
+
+// ============================================================
+// Search panel
+// ============================================================
+
+function openSearchPanel(type) {
+    searchPanelTarget = type;
+    el.searchPanelTitle.textContent = type === 'from' ? 'SELECT FROM TIMEZONE' : 'SELECT TO TIMEZONE';
+    el.searchPanel.classList.add('open');
+    el.searchPanelInput.value = '';
+    el.searchPanelInput.focus();
+    renderSearchResults('');
+}
+
+function closeSearchPanel() {
+    el.searchPanel.classList.remove('open');
+    searchPanelTarget = null;
+    el.searchPanelInput.value = '';
+}
+
+/**
+ * Render search results into the search panel.
+ * Shows recent section + continent-grouped timezones filtered by query.
+ */
+function renderSearchResults(query) {
+    const container = el.searchPanelResults;
+    container.innerHTML = '';
+    const q = query.toLowerCase().trim();
+
+    // Build country match set
+    const countryMatchZones = new Set();
+    if (q) {
+        for (const [country, zones] of Object.entries(COUNTRY_SEARCH_MAP)) {
+            if (country.includes(q)) {
+                zones.forEach(z => countryMatchZones.add(z));
+            }
+        }
+    }
+
+    // Filter function
+    function matches(tz) {
+        if (!q) return true;
+        return tz.searchText.includes(q) || countryMatchZones.has(tz.name);
+    }
+
+    // Highlight matched substring in text
+    function highlight(text, query) {
+        if (!query) return escapeHtml(text);
+        const escaped = escapeHtml(text);
+        const idx = escaped.toLowerCase().indexOf(query.toLowerCase());
+        if (idx === -1) return escaped;
+        return escaped.slice(0, idx) + '<mark>' + escaped.slice(idx, idx + query.length) + '</mark>' + escaped.slice(idx + query.length);
+    }
+
+    // Build a result item DOM node
+    function createResultItem(tz) {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.setAttribute('role', 'option');
+        item.dataset.timezone = tz.name;
+
+        const line1 = document.createElement('div');
+        line1.className = 'search-result-line1';
+        line1.innerHTML = highlight(tz.city, q) + ' <span class="offset">' + escapeHtml(tz.offsetString) + '</span>';
+
+        const line2 = document.createElement('div');
+        line2.className = 'search-result-line2';
+        line2.innerHTML = highlight(tz.name, q) + ' \u00B7 ' + escapeHtml(tz.longName);
+
+        item.appendChild(line1);
+        item.appendChild(line2);
+
+        item.addEventListener('click', function() {
+            selectTimezone(searchPanelTarget, tz.name);
+        });
+
+        return item;
+    }
+
+    // Build a group header
+    function createHeader(label) {
+        const h = document.createElement('div');
+        h.className = 'search-group-header';
+        h.textContent = label;
+        return h;
+    }
+
+    let totalResults = 0;
+
+    // --- Recent section ---
+    if (recentTimezones.length > 0) {
+        const recentZones = recentTimezones
+            .map(name => timezones.find(tz => tz.name === name))
+            .filter(Boolean)
+            .filter(matches);
+
+        if (recentZones.length > 0) {
+            container.appendChild(createHeader('\u2605 Recent'));
+            recentZones.forEach(tz => {
+                container.appendChild(createResultItem(tz));
+                totalResults++;
+            });
+        }
+    }
+
+    // --- Continent groups ---
+    let currentRegion = null;
+    for (const tz of timezones) {
+        if (!matches(tz)) continue;
+
+        if (tz.region !== currentRegion) {
+            currentRegion = tz.region;
+            container.appendChild(createHeader(currentRegion));
+        }
+
+        container.appendChild(createResultItem(tz));
+        totalResults++;
+    }
+
+    // No results message
+    if (totalResults === 0 && q) {
+        const noResults = document.createElement('div');
+        noResults.className = 'search-no-results';
+        noResults.textContent = 'No timezones found';
+        container.appendChild(noResults);
+    }
+}
+
+// ============================================================
+// Timezone selection
+// ============================================================
+
+function selectTimezone(type, timezoneName) {
+    const tzObj = timezoneName ? timezones.find(tz => tz.name === timezoneName) : null;
+
     if (type === 'from') {
         selectedFromTimezone = timezoneName;
-        elements.fromTimezoneDropdown.querySelector('.selected-text').textContent = displayName;
+        updatePillDisplay('from', tzObj);
     } else {
         selectedToTimezone = timezoneName;
-        elements.toTimezoneDropdown.querySelector('.selected-text').textContent = displayName;
+        updatePillDisplay('to', tzObj);
     }
 
-    closeAllDropdowns();
-
-    // Save timezone preferences whenever a selection is made
+    closeSearchPanel();
     saveTimezonePreferences();
 
-    // Add to recents and re-render dropdowns to show updated recents
+    // Add to recents
     if (timezoneName) {
-        addToRecentTimezones(timezoneName).then(() => {
-            populateTimezoneOptions();
-        });
+        addToRecentTimezones(timezoneName);
     }
+
+    // Auto-convert after timezone change
+    triggerAutoConvert();
 }
 
 // ============================================================
-// Intl-based formatting helpers
+// Auto-convert (debounced 300ms)
 // ============================================================
 
-/**
- * Format a time in the given IANA timezone using Intl
- */
+function triggerAutoConvert() {
+    clearTimeout(autoConvertTimer);
+    autoConvertTimer = setTimeout(() => {
+        const input = el.dateTimeInput.value.trim();
+        if (input) {
+            handleConversion();
+        }
+    }, 300);
+}
+
+// ============================================================
+// Intl-based formatting helpers (kept from v1)
+// ============================================================
+
 function formatInTimezone(utcDate, ianaZone, opts = {}) {
     return new Intl.DateTimeFormat('en-US', {
         timeZone: ianaZone,
@@ -789,9 +663,6 @@ function formatInTimezone(utcDate, ianaZone, opts = {}) {
     }).format(utcDate);
 }
 
-/**
- * Format a date (weekday, month, day, year) in the given IANA timezone using Intl
- */
 function formatDateInTimezone(utcDate, ianaZone) {
     return new Intl.DateTimeFormat('en-US', {
         timeZone: ianaZone,
@@ -802,10 +673,6 @@ function formatDateInTimezone(utcDate, ianaZone) {
     }).format(utcDate);
 }
 
-/**
- * Format wall-clock components as a time string.
- * Shows what the user originally typed, not the zone's current DST interpretation.
- */
 function formatWallClock(wc, opts = {}) {
     if (!wc) return '';
     let h = wc.hour;
@@ -820,9 +687,6 @@ function formatWallClock(wc, opts = {}) {
     return `${h}:${min} ${ampm}`;
 }
 
-/**
- * Format a short date (e.g. "Sat, Mar 15") for cross-midnight range display
- */
 function formatShortDateInTimezone(utcDate, ianaZone) {
     return new Intl.DateTimeFormat('en-US', {
         timeZone: ianaZone,
@@ -832,9 +696,6 @@ function formatShortDateInTimezone(utcDate, ianaZone) {
     }).format(utcDate);
 }
 
-/**
- * Escape HTML to prevent XSS in user input displayed in result
- */
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -842,19 +703,15 @@ function escapeHtml(text) {
 }
 
 // ============================================================
-// Conversion logic — uses TimeShiftParser + Intl formatting
+// Conversion logic (kept from v1 — result display rewritten)
 // ============================================================
 
-
-/**
- * Handle time conversion
- */
 function handleConversion() {
-    const inputText = elements.dateTimeInput.value.trim();
+    const inputText = el.dateTimeInput.value.trim();
 
     if (!inputText) {
-        elements.confidenceBar.style.display = 'none';
-        showResult('Please enter a date/time to convert.', 'error');
+        el.confidenceText.classList.remove('show');
+        showError('Please enter a date/time to convert.');
         return;
     }
 
@@ -864,72 +721,56 @@ function handleConversion() {
     });
 
     if (!parseResult) {
-        elements.confidenceBar.style.display = 'none';
-        showResult(`
-            <div style="color: #f59e0b; font-weight: 600; margin-bottom: 8px;">! No Time Information Detected</div>
-            <div style="font-size: 13px; line-height: 1.4;">
-                Input: "<strong>${escapeHtml(inputText)}</strong>"<br><br>
-                Please include time information for conversion.<br><br>
-                <strong>Supported formats:</strong><br>
-                • 12:00 PM<br>
-                • 12:00 PM - 1:00 PM<br>
-                • Sep 2, 2025 12:00 PM<br>
-                • 2025-09-02 12:00<br>
-                • Tuesday, Sep 2, 2025 12:00 PM PST
-            </div>
-        `, 'info');
+        el.confidenceText.classList.remove('show');
+        showInfo(inputText);
         return;
     }
 
     try {
         let { utcDate, sourceTimezone, confidence, isRange, rangeEndUtcDate } = parseResult;
 
-        // If confidence is low but user manually selected a From timezone, upgrade
+        // Upgrade low confidence if user manually selected From timezone
         if (confidence === 'low' && selectedFromTimezone) {
             confidence = 'medium';
         }
 
-        // Show or hide confidence indicator
+        // Show or hide confidence
         if (confidence === 'high') {
-            elements.confidenceBar.style.display = 'none';
+            el.confidenceText.classList.remove('show');
         } else {
             const detail = parseResult.confidenceDetail || (confidence === 'medium'
-                ? 'Timezone inferred — verify the source timezone'
-                : 'Low confidence — please select the source timezone');
-            elements.confidenceText.textContent = detail;
-            elements.confidenceBar.style.display = 'flex';
+                ? 'Timezone inferred \u2014 verify the source timezone'
+                : 'Low confidence \u2014 please select the source timezone');
+            el.confidenceText.textContent = detail;
+            el.confidenceText.classList.add('show');
         }
 
-        // If confidence is high, auto-update From dropdown with detected timezone
+        // High confidence — auto-update From pill with detected timezone
         if (confidence === 'high' && sourceTimezone !== selectedFromTimezone) {
             const detectedObj = timezones.find(tz => tz.name === sourceTimezone);
             if (detectedObj) {
                 selectedFromTimezone = sourceTimezone;
-                // If explicit offset was given, show it in dropdown instead of current DST label
                 if (parseResult.explicitOffset !== null && parseResult.explicitOffset !== undefined) {
                     const sign = parseResult.explicitOffset >= 0 ? '+' : '-';
                     const absMin = Math.abs(parseResult.explicitOffset);
                     const h = String(Math.floor(absMin / 60)).padStart(2, '0');
                     const m = String(absMin % 60).padStart(2, '0');
                     const city = sourceTimezone.split('/').pop().replace(/_/g, ' ');
-                    elements.fromTimezoneDropdown.querySelector('.selected-text').textContent = `${city} (UTC${sign}${h}:${m})`;
+                    updatePillDisplay('from', detectedObj, `${detectedObj.abbreviation} \u00B7 ${city}`, `UTC${sign}${h}:${m}`);
                 } else {
-                    elements.fromTimezoneDropdown.querySelector('.selected-text').textContent = detectedObj.displayName;
+                    updatePillDisplay('from', detectedObj);
                 }
             }
         }
 
         // Determine target timezone
-        // When confidence is high (timezone detected from text), always default To
-        // to the user's local timezone — this gives the most useful result
-        // (e.g., "EST → your local time") regardless of previously saved prefs
         let targetTimezone = selectedToTimezone;
         if (!targetTimezone || (confidence === 'high' && targetTimezone !== userTimezone)) {
             targetTimezone = userTimezone;
             const userTzObj = timezones.find(tz => tz.name === userTimezone);
             if (userTzObj) {
                 selectedToTimezone = userTimezone;
-                elements.toTimezoneDropdown.querySelector('.selected-text').textContent = userTzObj.displayName;
+                updatePillDisplay('to', userTzObj);
             }
         }
 
@@ -938,8 +779,7 @@ function handleConversion() {
         const targetTimezoneObj = timezones.find(tz => tz.name === targetTimezone);
         const targetDisplay = targetTimezoneObj ? targetTimezoneObj.displayName : targetTimezone;
 
-        // When user explicitly stated an offset like (GMT-5:00), show that offset
-        // instead of the zone's current DST label (which might show UTC-4/EDT)
+        // Source display — use explicit offset if provided
         let sourceDisplay;
         if (parseResult.explicitOffset !== null && parseResult.explicitOffset !== undefined) {
             const sign = parseResult.explicitOffset >= 0 ? '+' : '-';
@@ -947,7 +787,6 @@ function handleConversion() {
             const h = String(Math.floor(absMin / 60)).padStart(2, '0');
             const m = String(absMin % 60).padStart(2, '0');
             sourceDisplay = `UTC${sign}${h}:${m}`;
-            // Also add context clues if we resolved a zone
             if (sourceTimezoneObj) {
                 const city = sourceTimezone.split('/').pop().replace(/_/g, ' ');
                 sourceDisplay = `${city} (${sourceDisplay})`;
@@ -964,203 +803,241 @@ function handleConversion() {
             const originalStartTime = parseResult.wallClock ? formatWallClock(parseResult.wallClock) : formatInTimezone(utcDate, sourceTimezone, { showSeconds: false });
             const originalEndTime = parseResult.rangeEndWallClock ? formatWallClock(parseResult.rangeEndWallClock) : formatInTimezone(rangeEndUtcDate, sourceTimezone, { showSeconds: false });
 
-            // Date display: only if user provided a date, and handle cross-midnight
-            let dateHtml = '';
+            // Date display
+            let dateText = '';
             if (parseResult.hasExplicitDate) {
                 const startDate = formatDateInTimezone(utcDate, targetTimezone);
                 const endDate = formatDateInTimezone(rangeEndUtcDate, targetTimezone);
                 if (startDate === endDate) {
-                    dateHtml = `<div style="color: #374151; font-size: 13px; margin-bottom: 8px;">${startDate}</div>`;
+                    dateText = startDate;
                 } else {
-                    // Cross-midnight: show date for each time
-                    dateHtml = `<div style="color: #374151; font-size: 13px; margin-bottom: 8px;">${formatShortDateInTimezone(utcDate, targetTimezone)} - ${formatShortDateInTimezone(rangeEndUtcDate, targetTimezone)}</div>`;
+                    dateText = `${formatShortDateInTimezone(utcDate, targetTimezone)} - ${formatShortDateInTimezone(rangeEndUtcDate, targetTimezone)}`;
                 }
             } else {
-                // No explicit date: check if range crosses midnight and show dates if so
                 const startDay = new Intl.DateTimeFormat('en-US', { timeZone: targetTimezone, day: 'numeric' }).format(utcDate);
                 const endDay = new Intl.DateTimeFormat('en-US', { timeZone: targetTimezone, day: 'numeric' }).format(rangeEndUtcDate);
                 if (startDay !== endDay) {
-                    dateHtml = `<div style="color: #374151; font-size: 13px; margin-bottom: 8px;">${formatShortDateInTimezone(utcDate, targetTimezone)} - ${formatShortDateInTimezone(rangeEndUtcDate, targetTimezone)}</div>`;
+                    dateText = `${formatShortDateInTimezone(utcDate, targetTimezone)} - ${formatShortDateInTimezone(rangeEndUtcDate, targetTimezone)}`;
                 }
             }
 
-            const resultHtml = `
-                <div style="color: #ffffff; font-weight: 600; margin-bottom: 12px; font-size: 14px;">&#10003; Time Range Converted</div>
+            const targetTzName = targetTimezoneObj ? `${targetTimezoneObj.abbreviation} \u00B7 ${targetTimezoneObj.longName}` : targetTimezone;
 
-                <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 10px; margin-bottom: 12px; text-align: center; color: #1f2937;">
-                    <div style="color: #111827; font-weight: 700; font-size: 18px; margin-bottom: 6px;">
-                        ${convertedStartTime} - ${convertedEndTime}
-                    </div>
-                    ${dateHtml}
-                    <div style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 20px; display: inline-block;">
-                        <div style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
-                            ${escapeHtml(targetDisplay)}
-                        </div>
-                    </div>
-                </div>
-
-                <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px; font-size: 12px;">
-                    <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 2px;">Original Range:</div>
-                    <div style="color: #ffffff;">${originalStartTime} - ${originalEndTime}</div>
-                    <div style="color: #e2e8f0; font-size: 11px; margin-top: 2px;">${escapeHtml(sourceDisplay)}</div>${sourceLongName ? `<div style="color: #cbd5e1; font-size: 10px; margin-top: 1px;">${escapeHtml(sourceLongName)}</div>` : ''}
+            el.resultContent.innerHTML = `
+                <div class="result-range-time">${convertedStartTime} - ${convertedEndTime}</div>
+                ${dateText ? `<div class="result-date">${escapeHtml(dateText)}</div>` : ''}
+                <div class="result-tz-name">${escapeHtml(targetTzName)}</div>
+                <div class="result-original">
+                    <span class="result-original-time">${originalStartTime} - ${originalEndTime}</span>
+                    <br>${escapeHtml(sourceDisplay)}${sourceLongName ? ` \u00B7 ${escapeHtml(sourceLongName)}` : ''}
                 </div>
             `;
 
-            // Build plain text for copy: "2:00 PM - 3:30 PM EST → 12:30 AM - 2:00 AM IST"
-            const sourceAbbr = sourceTimezoneObj
-                ? (sourceTimezone.split('/').pop().replace(/_/g, ' '))
-                : sourceTimezone;
-            const targetAbbr = targetTimezoneObj
-                ? (targetTimezone.split('/').pop().replace(/_/g, ' '))
-                : targetTimezone;
+            // Copy text
+            const sourceAbbr = sourceTimezoneObj ? sourceTimezone.split('/').pop().replace(/_/g, ' ') : sourceTimezone;
+            const targetAbbr = targetTimezoneObj ? targetTimezone.split('/').pop().replace(/_/g, ' ') : targetTimezone;
             lastConversionText = `${originalStartTime} - ${originalEndTime} ${sourceAbbr} \u2192 ${convertedStartTime} - ${convertedEndTime} ${targetAbbr}`;
 
-            showResult(resultHtml, 'success');
+            showResultSuccess();
         } else {
             // ---- Single time conversion ----
             const convertedTime = formatInTimezone(utcDate, targetTimezone, { showSeconds: true });
             const originalTime = parseResult.wallClock ? formatWallClock(parseResult.wallClock, { showSeconds: true }) : formatInTimezone(utcDate, sourceTimezone, { showSeconds: true });
 
-            // Only show date if user explicitly provided one
-            const singleDateHtml = parseResult.hasExplicitDate
-                ? `<div style="color: #374151; font-size: 13px; margin-bottom: 8px;">${formatDateInTimezone(utcDate, targetTimezone)}</div>`
+            const singleDateText = parseResult.hasExplicitDate
+                ? formatDateInTimezone(utcDate, targetTimezone)
                 : '';
 
-            const resultHtml = `
-                <div style="color: #ffffff; font-weight: 600; margin-bottom: 12px; font-size: 14px;">&#10003; Time Converted</div>
+            const targetTzName = targetTimezoneObj ? `${targetTimezoneObj.abbreviation} \u00B7 ${targetTimezoneObj.longName}` : targetTimezone;
 
-                <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 10px; margin-bottom: 12px; text-align: center; color: #1f2937;">
-                    <div style="color: #111827; font-weight: 700; font-size: 22px; margin-bottom: 6px;">
-                        ${convertedTime}
-                    </div>
-                    ${singleDateHtml}
-                    <div style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 20px; display: inline-block;">
-                        <div style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
-                            ${escapeHtml(targetDisplay)}
-                        </div>
-                    </div>
-                </div>
-
-                <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px; font-size: 12px;">
-                    <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 2px;">Original Time:</div>
-                    <div style="color: #ffffff;">${originalTime}</div>
-                    <div style="color: #e2e8f0; font-size: 11px; margin-top: 2px;">${escapeHtml(sourceDisplay)}</div>${sourceLongName ? `<div style="color: #cbd5e1; font-size: 10px; margin-top: 1px;">${escapeHtml(sourceLongName)}</div>` : ''}
+            el.resultContent.innerHTML = `
+                <div class="result-converted-time">${convertedTime}</div>
+                ${singleDateText ? `<div class="result-date">${escapeHtml(singleDateText)}</div>` : ''}
+                <div class="result-tz-name">${escapeHtml(targetTzName)}</div>
+                <div class="result-original">
+                    <span class="result-original-time">${originalTime}</span>
+                    <br>${escapeHtml(sourceDisplay)}${sourceLongName ? ` \u00B7 ${escapeHtml(sourceLongName)}` : ''}
                 </div>
             `;
 
-            // Build plain text for copy: "3:45:00 PM → 1:15:00 AM IST"
-            const singleSourceAbbr = sourceTimezoneObj
-                ? (sourceTimezone.split('/').pop().replace(/_/g, ' '))
-                : sourceTimezone;
-            const singleTargetAbbr = targetTimezoneObj
-                ? (targetTimezone.split('/').pop().replace(/_/g, ' '))
-                : targetTimezone;
+            // Copy text
+            const singleSourceAbbr = sourceTimezoneObj ? sourceTimezone.split('/').pop().replace(/_/g, ' ') : sourceTimezone;
+            const singleTargetAbbr = targetTimezoneObj ? targetTimezone.split('/').pop().replace(/_/g, ' ') : targetTimezone;
             lastConversionText = `${originalTime} ${singleSourceAbbr} \u2192 ${convertedTime} ${singleTargetAbbr}`;
 
-            showResult(resultHtml, 'success');
+            showResultSuccess();
         }
 
-
     } catch (error) {
-        elements.confidenceBar.style.display = 'none';
-        showResult(`
-            <div style="color: #f87171; font-weight: 600; margin-bottom: 8px;">Error</div>
-            <div style="font-size: 12px; opacity: 0.8;">${escapeHtml(error.message)}</div>
-        `, 'error');
+        el.confidenceText.classList.remove('show');
+        showError(error.message);
     }
 }
 
 // ============================================================
-// Result display + context menu check
+// Result display helpers
 // ============================================================
 
-/**
- * Show conversion result
- */
-function showResult(html, type) {
-    // Rebuild the copy button HTML since innerHTML replaces everything
-    const copyBtnHtml = `<button class="copy-btn${type === 'success' ? ' visible' : ''}" id="copyBtn" title="Copy result">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="5" width="9" height="9" rx="1.5"/>
-            <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
-        </svg>
-        <span id="copyBtnText">Copy</span>
-    </button>`;
-
-    elements.result.innerHTML = copyBtnHtml + html;
-    elements.result.className = `result show`;
-
-    // Add error class for error styling
-    if (type === 'error') {
-        elements.result.className = `result show error`;
-    }
-
-    // Re-bind copy button references and event
-    elements.copyBtn = document.getElementById('copyBtn');
-    elements.copyBtnText = document.getElementById('copyBtnText');
-    elements.copyBtn.addEventListener('click', function() {
-        if (!lastConversionText) return;
-        navigator.clipboard.writeText(lastConversionText).then(() => {
-            elements.copyBtnText.textContent = 'Copied!';
-            setTimeout(() => {
-                elements.copyBtnText.textContent = 'Copy';
-            }, 1500);
-        });
-    });
-
-    // Clear copy text for non-success states
-    if (type !== 'success') {
-        lastConversionText = '';
-    }
+function showResultSuccess() {
+    el.resultArea.className = 'result-area show';
+    el.copyBtn.className = 'copy-btn visible';
 }
 
-/**
- * Check for text from context menu
- */
+function showError(message) {
+    el.resultContent.innerHTML = `
+        <div class="result-error-title">Error</div>
+        <div class="result-error-body">${escapeHtml(message)}</div>
+    `;
+    el.resultArea.className = 'result-area show error';
+    el.copyBtn.className = 'copy-btn';
+    lastConversionText = '';
+}
+
+function showInfo(inputText) {
+    el.resultContent.innerHTML = `
+        <div class="result-error-title">No Time Information Detected</div>
+        <div class="result-error-body">
+            Input: "${escapeHtml(inputText)}"<br><br>
+            Please include time information for conversion.<br><br>
+            <strong>Supported formats:</strong><br>
+            &bull; 12:00 PM<br>
+            &bull; 12:00 PM - 1:00 PM<br>
+            &bull; Sep 2, 2025 12:00 PM<br>
+            &bull; 2025-09-02 12:00<br>
+            &bull; Tuesday, Sep 2, 2025 12:00 PM PST
+        </div>
+    `;
+    el.resultArea.className = 'result-area show';
+    el.copyBtn.className = 'copy-btn';
+    lastConversionText = '';
+}
+
+// ============================================================
+// Context menu check (kept from v1)
+// ============================================================
+
 async function checkForContextMenuText() {
     try {
         const result = await chrome.storage.local.get(['selectedText', 'fromContextMenu', 'timestamp']);
         if (result.fromContextMenu && result.selectedText) {
-            // Check if the data is recent (within 60 seconds)
             const isRecent = result.timestamp && (Date.now() - result.timestamp < 60000);
 
             if (isRecent) {
-                // Fill the input with selected text
-                elements.dateTimeInput.value = result.selectedText;
-
-                // Clear the storage
+                el.dateTimeInput.value = result.selectedText;
                 await chrome.storage.local.remove(['selectedText', 'fromContextMenu', 'timestamp']);
 
-                // Auto-convert if text looks like a date/time (use TimeShiftParser)
                 if (TimeShiftParser.parse(result.selectedText, { userTimezone: userTimezone }) !== null) {
                     handleConversion();
                 } else {
-                    // Show a helpful message if it doesn't look like date/time
-                    showResult(`
-                        <div style="color: #f59e0b; font-weight: 600; margin-bottom: 8px;">! No Time Information Detected</div>
-                        <div style="font-size: 13px; line-height: 1.4;">
-                            Selected text: "<strong>${escapeHtml(result.selectedText)}</strong>"<br><br>
-                            Please include time information for conversion.<br><br>
-                            <strong>Supported formats:</strong><br>
-                            • 12:00 PM<br>
-                            • 12:00 PM - 1:00 PM<br>
-                            • Sep 2, 2025 12:00 PM<br>
-                            • 2025-09-02 12:00<br>
-                            • Tuesday, Sep 2, 2025 12:00 PM PST
-                        </div>
-                    `, 'info');
+                    showInfo(result.selectedText);
                 }
 
-                // Clear any badge notifications
                 if (chrome.action && chrome.action.setBadgeText) {
                     chrome.action.setBadgeText({ text: '' });
                 }
             } else {
-                // Clear old data
                 await chrome.storage.local.remove(['selectedText', 'fromContextMenu', 'timestamp']);
             }
         }
-    } catch (error) {
-        // Silent fail for context menu check
+    } catch {
+        // Silent fail
     }
 }
+
+// ============================================================
+// Event listeners
+// ============================================================
+
+function setupEventListeners() {
+    // Input field — auto-convert on input (debounced)
+    el.dateTimeInput.addEventListener('input', function() {
+        triggerAutoConvert();
+    });
+
+    // Enter key — immediate convert
+    el.dateTimeInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            clearTimeout(autoConvertTimer);
+            handleConversion();
+        }
+    });
+
+    // Now button
+    el.nowBtn.addEventListener('click', function() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        el.dateTimeInput.value = timeStr;
+        handleConversion();
+    });
+
+    // Pill clicks — open search panel
+    el.fromPill.addEventListener('click', function() {
+        openSearchPanel('from');
+    });
+    el.toPill.addEventListener('click', function() {
+        openSearchPanel('to');
+    });
+
+    // Pill keyboard accessibility
+    el.fromPill.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openSearchPanel('from');
+        }
+    });
+    el.toPill.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openSearchPanel('to');
+        }
+    });
+
+    // Search panel close button
+    el.searchPanelClose.addEventListener('click', closeSearchPanel);
+
+    // Search panel Escape key
+    el.searchPanel.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSearchPanel();
+        }
+    });
+
+    // Search panel input — filter results
+    el.searchPanelInput.addEventListener('input', function() {
+        renderSearchResults(this.value);
+    });
+
+    // Copy button
+    el.copyBtn.addEventListener('click', function() {
+        if (!lastConversionText) return;
+        navigator.clipboard.writeText(lastConversionText).then(() => {
+            el.copyBtnText.textContent = 'Copied!';
+            setTimeout(() => {
+                el.copyBtnText.textContent = 'Copy';
+            }, 1500);
+        });
+    });
+}
+
+// ============================================================
+// Initialization
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', async function() {
+    initializeElements();
+    detectUserTimezone();
+
+    await loadRecentTimezones();
+    initializeTimezones();
+    setupEventListeners();
+
+    await loadTimezonePreferences();
+
+    // Check if opened from context menu
+    checkForContextMenuText();
+
+    // Smart placeholder
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    el.dateTimeInput.placeholder = `e.g., ${timeStr} (now)`;
+});
