@@ -965,7 +965,7 @@ function handleConversion() {
             const fromLabel = fromTzObj ? `${fromTzObj.abbreviation} \u00B7 ${fromTzObj.city}` : sourceTimezone;
             const detail = parseResult.confidenceDetail || (confidence === 'medium'
                 ? `Timezone inferred: ${fromLabel}`
-                : `No timezone in input \u2014 using ${selectedFromTimezone ? 'selected' : 'local'} timezone: ${fromLabel}`);
+                : `No timezone in input, using ${selectedFromTimezone ? 'selected' : 'local'} timezone: ${fromLabel}`);
             el.confidenceText.textContent = detail;
             el.confidenceText.classList.add('show');
         } else {

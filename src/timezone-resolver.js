@@ -110,7 +110,7 @@ function resolveTimezone(args) {
     return {
         zone: userTimezone,
         confidence: 'low',
-        confidenceDetail: `No timezone detected — using your local time (${userTimezone})`
+        confidenceDetail: null
     };
 }
 
