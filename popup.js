@@ -566,6 +566,34 @@ function renderSearchResults(query) {
         return h;
     }
 
+    // Score results by relevance (lower = better)
+    function relevanceScore(tz) {
+        if (!q) return 100;
+        const name = tz.name.toLowerCase();
+        const city = tz.city.toLowerCase();
+        const aliases = getCityAliases(tz.name).toLowerCase();
+        const abbr = tz.abbreviation.toLowerCase();
+
+        // Exact city name match
+        if (city === q) return 1;
+        // Exact alias match (word boundary)
+        if (aliases.split(/\s+/).includes(q)) return 2;
+        // Exact abbreviation match
+        if (abbr === q) return 3;
+        // Country map match
+        if (countryMatchZones.has(tz.name)) return 4;
+        // City starts with query
+        if (city.startsWith(q)) return 10;
+        // Alias word starts with query
+        if (aliases.split(/\s+/).some(w => w.startsWith(q))) return 11;
+        // City or alias contains query
+        if (city.includes(q) || aliases.includes(q)) return 20;
+        // IANA name contains query
+        if (name.includes(q)) return 30;
+        // Long name / display name contains query
+        return 50;
+    }
+
     let totalResults = 0;
 
     // --- Recent section ---
@@ -584,18 +612,32 @@ function renderSearchResults(query) {
         }
     }
 
-    // --- Continent groups ---
-    let currentRegion = null;
-    for (const tz of timezones) {
-        if (!matches(tz)) continue;
+    // --- Filtered and sorted results ---
+    if (q) {
+        // When searching, sort by relevance instead of region grouping
+        const matched = timezones.filter(matches);
+        matched.sort((a, b) => relevanceScore(a) - relevanceScore(b) || a.city.localeCompare(b.city));
 
-        if (tz.region !== currentRegion) {
-            currentRegion = tz.region;
-            container.appendChild(createHeader(currentRegion));
+        // Limit to 50 results for performance
+        const capped = matched.slice(0, 50);
+        if (capped.length > 0) {
+            container.appendChild(createHeader('Results'));
+            capped.forEach(tz => {
+                container.appendChild(createResultItem(tz));
+                totalResults++;
+            });
         }
-
-        container.appendChild(createResultItem(tz));
-        totalResults++;
+    } else {
+        // No query — show all grouped by continent
+        let currentRegion = null;
+        for (const tz of timezones) {
+            if (tz.region !== currentRegion) {
+                currentRegion = tz.region;
+                container.appendChild(createHeader(currentRegion));
+            }
+            container.appendChild(createResultItem(tz));
+            totalResults++;
+        }
     }
 
     // No results message
