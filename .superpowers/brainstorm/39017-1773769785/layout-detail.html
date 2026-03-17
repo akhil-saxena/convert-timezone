@@ -1,0 +1,110 @@
+<h2>Refined Layout</h2>
+<p class="subtitle">New top-to-bottom flow. Click the version you prefer.</p>
+
+<div class="split">
+  <div class="mockup" data-choice="current" onclick="toggleSelect(this)">
+    <div class="mockup-header">Current Layout (problems)</div>
+    <div class="mockup-body" style="padding: 0;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px; color: #fff; font-family: system-ui; font-size: 10px; min-height: 320px;">
+        <div style="text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 4px;">TimeShift</div>
+        <div style="text-align: center; font-size: 9px; opacity: 0.7; margin-bottom: 8px;">Convert time across global timezones</div>
+
+        <div style="background: rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; min-height: 24px; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); font-size: 9px;">
+          ← Result appears HERE (above input) ✗
+        </div>
+
+        <div style="background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; color: #f59e0b; font-size: 8px; display: flex; justify-content: space-between;">
+          <span>No timezone detected...</span>
+          <span style="background: rgba(245,158,11,0.2); padding: 1px 4px; border-radius: 3px; font-size: 7px;">Change</span>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; border: 1px solid rgba(255,255,255,0.15);">
+          <div style="font-size: 8px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">Enter Date/Time:</div>
+          <div style="background: rgba(255,255,255,0.9); border-radius: 4px; padding: 6px; color: #333; font-size: 9px; margin-bottom: 6px;">3:00 PM EST</div>
+
+          <div style="font-size: 8px; color: rgba(255,255,255,0.6); margin-bottom: 2px;">From Timezone:</div>
+          <div style="background: rgba(255,255,255,0.9); border-radius: 4px; padding: 6px; color: #333; font-size: 9px; margin-bottom: 6px;">New York (UTC-05:00) ▾</div>
+
+          <div style="font-size: 8px; color: rgba(255,255,255,0.6); margin-bottom: 2px;">To Timezone:</div>
+          <div style="background: rgba(255,255,255,0.9); border-radius: 4px; padding: 6px; color: #333; font-size: 9px; margin-bottom: 6px;">Kolkata (UTC+05:30) ▾</div>
+
+          <div style="background: rgba(255,255,255,0.9); border-radius: 4px; padding: 6px; text-align: center; color: #667eea; font-weight: 600; font-size: 10px;">Convert Time</div>
+        </div>
+
+        <div style="margin-top: 6px; font-size: 8px; color: rgba(255,255,255,0.4);">
+          How to Use: Right-click on any date/time...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup" data-choice="new" onclick="toggleSelect(this)">
+    <div class="mockup-header">New Layout (proposed)</div>
+    <div class="mockup-body" style="padding: 0;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px; color: #fff; font-family: system-ui; font-size: 10px; min-height: 320px;">
+        <div style="text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 8px;">TimeShift</div>
+
+        <!-- Input first -->
+        <div style="position: relative; margin-bottom: 8px;">
+          <div style="background: rgba(255,255,255,0.95); border-radius: 8px; padding: 8px 32px 8px 10px; color: #333; font-size: 11px;">3:00 PM EST</div>
+          <div style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: rgba(102,126,234,0.15); border-radius: 4px; padding: 2px 4px; font-size: 8px; color: #667eea;">Now</div>
+        </div>
+
+        <!-- Compact From → To row -->
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+          <div style="flex: 1; background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 6px; padding: 6px 8px; border: 1px solid rgba(255,255,255,0.2);">
+            <div style="font-size: 7px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px;">From</div>
+            <div style="font-size: 10px; font-weight: 500;">EST ▾</div>
+          </div>
+          <div style="font-size: 14px; opacity: 0.6;">→</div>
+          <div style="flex: 1; background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 6px; padding: 6px 8px; border: 1px solid rgba(255,255,255,0.2);">
+            <div style="font-size: 7px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px;">To</div>
+            <div style="font-size: 10px; font-weight: 500;">IST ▾</div>
+          </div>
+        </div>
+
+        <!-- Result below -->
+        <div style="background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); border-radius: 10px; padding: 14px; border: 1px solid rgba(255,255,255,0.2); text-align: center;">
+          <div style="font-size: 8px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Converted</div>
+          <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">3:30 AM</div>
+          <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">Wednesday, Mar 18</div>
+          <div style="font-size: 9px; opacity: 0.5; margin-top: 4px;">India Standard Time</div>
+          <div style="margin-top: 8px; display: flex; justify-content: center; gap: 12px;">
+            <span style="font-size: 8px; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 10px; cursor: pointer;">Copy</span>
+          </div>
+        </div>
+
+        <!-- Confidence as subtle inline text -->
+        <div style="text-align: center; margin-top: 6px; font-size: 8px; color: rgba(245,158,11,0.7);">
+          Detected: EST (Eastern Standard Time)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>Key Changes</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;">
+    <div>
+      <div style="color: #f87171; font-weight: 600; margin-bottom: 4px;">Removed</div>
+      <ul style="color: #aaa; line-height: 1.7; padding-left: 16px; margin: 0;">
+        <li>"Convert Time" button (auto-convert)</li>
+        <li>Instructions section</li>
+        <li>Stacked From/To dropdowns</li>
+        <li>Full-width confidence bar</li>
+        <li>Result above input</li>
+      </ul>
+    </div>
+    <div>
+      <div style="color: #4ade80; font-weight: 600; margin-bottom: 4px;">Added / Changed</div>
+      <ul style="color: #aaa; line-height: 1.7; padding-left: 16px; margin: 0;">
+        <li>Input at top → result below</li>
+        <li>Compact From → To inline row</li>
+        <li>Auto-convert on type/select</li>
+        <li>Confidence as subtle text</li>
+        <li>Bigger, bolder result</li>
+      </ul>
+    </div>
+  </div>
+</div>

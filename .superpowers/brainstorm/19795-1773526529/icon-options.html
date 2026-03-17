@@ -1,0 +1,116 @@
+<h2>TimeShift Icon Options</h2>
+<p class="subtitle">Pick the icon direction that fits the extension best. Each is an SVG that scales cleanly to 16/48/128px.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;padding:24px;background:#1a1a2e;">
+      <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgA" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/>
+            <stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bgA)"/>
+        <circle cx="64" cy="64" r="38" stroke="white" stroke-width="4" fill="none"/>
+        <line x1="64" y1="64" x2="64" y2="38" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="80" y2="64" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <!-- Arrow wrapping around clock -->
+        <path d="M96 28 C108 40, 112 56, 108 72" stroke="rgba(255,255,255,0.7)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <polygon points="110,72 104,68 106,76" fill="rgba(255,255,255,0.7)"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A: Classic Clock + Shift Arrow</h3>
+      <p>Clean clock face with a curved arrow suggesting timezone shifting. Minimal, recognizable at small sizes. Purple gradient background matches the extension theme.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;padding:24px;background:#1a1a2e;">
+      <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgB" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/>
+            <stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bgB)"/>
+        <!-- Globe outline -->
+        <circle cx="64" cy="64" r="34" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" fill="none"/>
+        <ellipse cx="64" cy="64" rx="18" ry="34" stroke="rgba(255,255,255,0.3)" stroke-width="2" fill="none"/>
+        <line x1="30" y1="52" x2="98" y2="52" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+        <line x1="30" y1="76" x2="98" y2="76" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+        <!-- Clock hands overlaid on globe -->
+        <line x1="64" y1="64" x2="64" y2="42" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="78" y2="58" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3.5" fill="white"/>
+        <!-- Two small timezone indicators -->
+        <text x="28" y="42" font-family="system-ui" font-size="12" font-weight="700" fill="rgba(255,255,255,0.8)">ET</text>
+        <text x="88" y="94" font-family="system-ui" font-size="12" font-weight="700" fill="rgba(255,255,255,0.8)">IST</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B: Globe Clock</h3>
+      <p>Globe wireframe with clock hands overlaid. Shows "ET" and "IST" hints to convey timezone conversion. More detailed, works best at 48px+.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;padding:24px;background:#1a1a2e;">
+      <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgC" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/>
+            <stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bgC)"/>
+        <!-- Two overlapping clocks -->
+        <circle cx="50" cy="58" r="26" stroke="white" stroke-width="3" fill="rgba(102,126,234,0.5)"/>
+        <line x1="50" y1="58" x2="50" y2="40" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <line x1="50" y1="58" x2="62" y2="52" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="50" cy="58" r="2.5" fill="white"/>
+
+        <circle cx="78" cy="70" r="26" stroke="white" stroke-width="3" fill="rgba(118,75,162,0.5)"/>
+        <line x1="78" y1="70" x2="78" y2="52" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <line x1="78" y1="70" x2="66" y2="76" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="78" cy="70" r="2.5" fill="white"/>
+
+        <!-- Arrow between them -->
+        <path d="M62 46 L72 50" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round"/>
+        <polygon points="72,50 67,46 69,53" fill="rgba(255,255,255,0.9)"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>C: Dual Clocks + Arrow</h3>
+      <p>Two overlapping clocks showing different times with an arrow between them. Directly communicates "convert from one time to another". Bold and distinctive.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="d" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;padding:24px;background:#1a1a2e;">
+      <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgD" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/>
+            <stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bgD)"/>
+        <!-- Stylized "TS" monogram with clock elements -->
+        <text x="24" y="88" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="800" fill="white" letter-spacing="-2">TS</text>
+        <!-- Clock hand coming off the T -->
+        <circle cx="96" cy="38" r="18" stroke="rgba(255,255,255,0.6)" stroke-width="2.5" fill="none"/>
+        <line x1="96" y1="38" x2="96" y2="26" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="96" y1="38" x2="105" y2="35" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="96" cy="38" r="2" fill="white"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>D: TS Monogram + Mini Clock</h3>
+      <p>Bold "TS" (TimeShift) lettermark with a small clock in the corner. Brand-focused, unique, instantly recognizable even at 16px as "TS".</p>
+    </div>
+  </div>
+</div>

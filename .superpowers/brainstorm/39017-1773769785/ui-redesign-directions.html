@@ -1,0 +1,95 @@
+<h2>TimeShift UI Redesign</h2>
+<p class="subtitle">Three directions for the full popup redesign. Click to select.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 8px; padding: 16px; color: #e0e0e0; font-family: system-ui; font-size: 11px;">
+        <div style="text-align: center; margin-bottom: 12px;">
+          <div style="font-size: 14px; font-weight: 600; color: #fff;">TimeShift</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.06); border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+          <input disabled style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px; color: #ccc; font-size: 11px; box-sizing: border-box;" placeholder="3:00 PM EST">
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <div style="flex: 1; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 8px; font-size: 10px; color: #999; border: 1px solid rgba(255,255,255,0.08);">From: Auto-detect</div>
+          <div style="color: #666; display: flex; align-items: center;">→</div>
+          <div style="flex: 1; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 8px; font-size: 10px; color: #999; border: 1px solid rgba(255,255,255,0.08);">To: Local</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #667eea22, #764ba222); border: 1px solid rgba(102,126,234,0.2); border-radius: 8px; padding: 12px; text-align: center;">
+          <div style="font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Converted</div>
+          <div style="font-size: 20px; font-weight: 700; color: #fff; margin: 4px 0;">3:00 AM IST</div>
+          <div style="font-size: 9px; color: #888;">Wed, Mar 18</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Dark Minimal</h3>
+      <p>Dark theme, compact layout. Input + From/To on a single row. Large result display. Clean, no visual noise. Feels like a developer tool.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #fff; border-radius: 8px; padding: 16px; color: #333; font-family: system-ui; font-size: 11px; border: 1px solid #e5e7eb;">
+        <div style="text-align: center; margin-bottom: 10px;">
+          <div style="font-size: 14px; font-weight: 600; color: #111;">TimeShift</div>
+        </div>
+        <div style="background: #f9fafb; border-radius: 8px; padding: 10px; border: 1px solid #e5e7eb; margin-bottom: 10px;">
+          <input disabled style="width: 100%; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; color: #333; font-size: 11px; box-sizing: border-box;" placeholder="3:00 PM EST">
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
+          <div style="flex: 1; background: #f3f4f6; border-radius: 6px; padding: 6px 8px; font-size: 10px; color: #555; border: 1px solid #e5e7eb;">EST</div>
+          <div style="background: #6366f1; color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 10px;">→</div>
+          <div style="flex: 1; background: #f3f4f6; border-radius: 6px; padding: 6px 8px; font-size: 10px; color: #555; border: 1px solid #e5e7eb;">IST</div>
+        </div>
+        <div style="background: #f0f0ff; border: 1px solid #e0e0ff; border-radius: 8px; padding: 12px; text-align: center;">
+          <div style="font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Result</div>
+          <div style="font-size: 20px; font-weight: 700; color: #4f46e5; margin: 4px 0;">3:00 AM IST</div>
+          <div style="font-size: 9px; color: #888;">Wed, Mar 18</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Clean Light</h3>
+      <p>White/light theme. Rounded cards, soft shadows. From/To shown as compact pills with arrow between. Feels modern, like Arc or Linear. Accessible.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 16px; color: #fff; font-family: system-ui; font-size: 11px;">
+        <div style="text-align: center; margin-bottom: 10px;">
+          <div style="font-size: 14px; font-weight: 600;">TimeShift</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 8px; padding: 10px; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;">
+          <input disabled style="width: 100%; background: rgba(255,255,255,0.9); border: none; border-radius: 6px; padding: 8px; color: #333; font-size: 11px; box-sizing: border-box;" placeholder="3:00 PM EST">
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <div style="flex: 1; background: rgba(255,255,255,0.9); border-radius: 6px; padding: 6px 8px; font-size: 10px; color: #555;">From: EST</div>
+          <div style="flex: 1; background: rgba(255,255,255,0.9); border-radius: 6px; padding: 6px 8px; font-size: 10px; color: #555;">To: IST</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 8px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+          <div style="font-size: 20px; font-weight: 700;">3:00 AM IST</div>
+          <div style="font-size: 9px; opacity: 0.8;">Wed, Mar 18</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Refined Glassmorphism</h3>
+      <p>Keep the current gradient + glassmorphism but fix the layout. From/To as a compact inline row instead of stacked dropdowns. Result more prominent. Remove clutter.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Current Pain Points Being Fixed</h3>
+  <ul style="font-size: 13px; line-height: 1.8; color: #aaa;">
+    <li><strong>Result is above the input</strong> — should be below, where you look after typing</li>
+    <li><strong>Two stacked dropdowns are heavy</strong> — From/To should be a compact inline row</li>
+    <li><strong>"Convert Time" button is redundant</strong> — auto-convert on input/selection change</li>
+    <li><strong>Confidence bar is intrusive</strong> — should be a subtle inline note, not a full-width bar</li>
+    <li><strong>Instructions section wastes space</strong> — most users learn from the placeholder/context menu</li>
+    <li><strong>400 zones in a flat dropdown is overwhelming</strong> — needs smart grouping + recent + search</li>
+  </ul>
+</div>

@@ -1,0 +1,129 @@
+<h2>Icon A Refined — Arrow parallel to clock</h2>
+<p class="subtitle">The arrow now follows the clock's circumference at a fixed distance, like an orbit. Pick the spacing you prefer.</p>
+
+<div class="cards">
+  <div class="card" data-choice="tight" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;gap:32px;padding:24px;background:#1a1a2e;">
+      <!-- 128px version -->
+      <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg1" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg1)"/>
+        <!-- Clock face -->
+        <circle cx="64" cy="64" r="36" stroke="white" stroke-width="3.5" fill="none"/>
+        <!-- Hour hand (pointing to ~2) -->
+        <line x1="64" y1="64" x2="64" y2="38" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <!-- Minute hand (pointing to ~12) -->
+        <line x1="64" y1="64" x2="80" y2="56" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <!-- Center dot -->
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <!-- Hour markers (12, 3, 6, 9) -->
+        <line x1="64" y1="30" x2="64" y2="34" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="98" y1="64" x2="94" y2="64" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="64" y1="98" x2="64" y2="94" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="30" y1="64" x2="34" y2="64" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <!-- Parallel arc arrow — 8px gap from clock (r=44), sweeps ~220deg -->
+        <path d="M 64 20 A 44 44 0 1 1 33.5 93" stroke="rgba(255,255,255,0.75)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <!-- Arrowhead at end of arc -->
+        <polygon points="33.5,93 29,85 39,89" fill="rgba(255,255,255,0.75)"/>
+      </svg>
+      <!-- 48px version -->
+      <svg width="48" height="48" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg1s" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg1s)"/>
+        <circle cx="64" cy="64" r="36" stroke="white" stroke-width="3.5" fill="none"/>
+        <line x1="64" y1="64" x2="64" y2="38" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="80" y2="56" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <path d="M 64 20 A 44 44 0 1 1 33.5 93" stroke="rgba(255,255,255,0.75)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <polygon points="33.5,93 29,85 39,89" fill="rgba(255,255,255,0.75)"/>
+      </svg>
+      <!-- 16px version -->
+      <svg width="16" height="16" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg1t" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg1t)"/>
+        <circle cx="64" cy="64" r="36" stroke="white" stroke-width="5" fill="none"/>
+        <line x1="64" y1="64" x2="64" y2="38" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="80" y2="56" stroke="white" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="4" fill="white"/>
+        <path d="M 64 20 A 44 44 0 1 1 33.5 93" stroke="rgba(255,255,255,0.85)" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <polygon points="33.5,93 26,82 41,87" fill="rgba(255,255,255,0.85)"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Tight (8px gap)</h3>
+      <p>Arrow hugs the clock closely. Compact feel. Shown at 128, 48, and 16px.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="medium" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;gap:32px;padding:24px;background:#1a1a2e;">
+      <!-- 128px version -->
+      <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg2" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg2)"/>
+        <!-- Slightly smaller clock to give arrow more room -->
+        <circle cx="64" cy="64" r="32" stroke="white" stroke-width="3.5" fill="none"/>
+        <line x1="64" y1="64" x2="64" y2="42" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="78" y2="57" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <line x1="64" y1="34" x2="64" y2="37" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="94" y1="64" x2="91" y2="64" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="64" y1="94" x2="64" y2="91" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="34" y1="64" x2="37" y2="64" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <!-- Parallel arc — 14px gap (r=46), sweeps ~240deg -->
+        <path d="M 64 18 A 46 46 0 1 1 28 87" stroke="rgba(255,255,255,0.75)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <polygon points="28,87 24,78 35,83" fill="rgba(255,255,255,0.75)"/>
+      </svg>
+      <!-- 48px -->
+      <svg width="48" height="48" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg2s" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg2s)"/>
+        <circle cx="64" cy="64" r="32" stroke="white" stroke-width="3.5" fill="none"/>
+        <line x1="64" y1="64" x2="64" y2="42" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="78" y2="57" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <path d="M 64 18 A 46 46 0 1 1 28 87" stroke="rgba(255,255,255,0.75)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <polygon points="28,87 24,78 35,83" fill="rgba(255,255,255,0.75)"/>
+      </svg>
+      <!-- 16px -->
+      <svg width="16" height="16" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg2t" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg2t)"/>
+        <circle cx="64" cy="64" r="32" stroke="white" stroke-width="5" fill="none"/>
+        <line x1="64" y1="64" x2="64" y2="42" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="78" y2="57" stroke="white" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="4" fill="white"/>
+        <path d="M 64 18 A 46 46 0 1 1 28 87" stroke="rgba(255,255,255,0.85)" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <polygon points="28,87 21,75 37,80" fill="rgba(255,255,255,0.85)"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Medium (14px gap)</h3>
+      <p>Balanced spacing. Arrow clearly separated from clock but still feels connected. Slightly smaller clock.</p>
+    </div>
+  </div>
+</div>

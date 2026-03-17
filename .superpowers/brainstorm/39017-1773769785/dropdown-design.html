@@ -1,0 +1,37 @@
+<h2>Timezone Picker Design</h2>
+<p class="subtitle">How should the compact From/To timezone selectors work? Click to choose.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Inline Search Overlay</h3>
+      <p>Clicking the From/To pill opens a search overlay that replaces the pill area. Type to search — results filter live. Shows: <strong>★ Recent (3)</strong> at top, then grouped results. Pressing Escape or clicking away closes it. Compact — fits within the extension width.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Dropdown Below Pill</h3>
+      <p>Traditional dropdown that opens below the pill. Search input at top of dropdown. Scrollable list with continent groups. Similar to current but more compact — shorter timezone names (just city + offset), no long timezone name line. Max height constrained.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Full-Width Modal</h3>
+      <p>Clicking pill opens a full-width search panel that covers the converter section. Large search input, generous spacing, easy to scan. Closes after selection. Feels like a proper search experience instead of a cramped dropdown.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>Search must match:</h3>
+  <ul style="font-size: 12px; color: #aaa; line-height: 1.8;">
+    <li><strong>City names</strong> — "Mumbai", "Calcutta", "NYC", "LA"</li>
+    <li><strong>Country names</strong> — "India", "Japan", "USA"</li>
+    <li><strong>Abbreviations</strong> — "EST", "IST", "CET"</li>
+    <li><strong>IANA identifiers</strong> — "Asia/Kolkata"</li>
+    <li><strong>Offsets</strong> — "+5:30", "UTC-5"</li>
+  </ul>
+</div>
