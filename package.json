@@ -1,0 +1,17 @@
+{
+  "name": "timeshift-extension",
+  "version": "2.0.0",
+  "private": true,
+  "description": "TimeShift: Global Timezone Converter - Chrome Extension",
+  "scripts": {
+    "build": "esbuild src/chrono-bundle.js --bundle --minify --outfile=libs/chrono.bundle.js --format=iife --global-name=TimeShiftParser",
+    "build:dev": "esbuild src/chrono-bundle.js --bundle --outfile=libs/chrono.bundle.js --format=iife --global-name=TimeShiftParser --sourcemap",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "dependencies": {
+    "chrono-node": "^2.9.0"
+  }
+}
