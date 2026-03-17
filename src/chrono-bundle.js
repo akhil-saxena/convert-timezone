@@ -1,45 +1,28 @@
 /**
- * chrono-bundle.js — Main orchestration module (Stage 5).
- * Imports chrono-node and the three Stage modules, exposes a single parse() API.
+ * chrono-bundle.js — Main orchestration module (Stage 4).
+ * Implements the full 6-stage pipeline with locale routing:
+ *   Stage 1: Sanitizer
+ *   Stage 2A: Tokenizer (non-destructive)
+ *   Stage 3: City & Timezone Extractor
+ *   Stage 4: Locale detection + Chrono parse (with 2B if locale == en)
+ *   Stage 5: Timezone resolution
+ *   Stage 6: Date construction
+ *
  * Built with esbuild into libs/chrono.bundle.js as window.TimeShiftParser.
  */
 
 const chrono = require('chrono-node');
-const { preprocess } = require('./preprocessor.js');
+const { sanitize } = require('./sanitizer.js');
+const { tokenizePhaseA, tokenizePhaseB } = require('./tokenizer.js');
+const { extract } = require('./city-extractor.js');
 const { resolveTimezone, getOffsetAtDate } = require('./timezone-resolver.js');
 const { constructDateInTimezone } = require('./date-constructor.js');
+const { AMBIGUOUS_ABBREVIATIONS } = require('./timezone-data.js');
 
 /**
- * Known timezone abbreviations to scan for in text.
- * Ordered longest-first so "AEST" matches before "EST".
- */
-const TZ_ABBREVIATIONS = [
-    'NZDT', 'NZST', 'AEDT', 'AEST', 'ACDT', 'ACST', 'AWST',
-    'AKDT', 'AKST', 'CEST', 'EEST', 'IRST', 'SAST',
-    'EST', 'EDT', 'CST', 'CDT', 'MST', 'MDT', 'PST', 'PDT',
-    'HST', 'UTC', 'GMT', 'BST', 'IST', 'CET', 'EET',
-    'JST', 'KST', 'SGT', 'HKT', 'ICT', 'WIB', 'PHT',
-    'MSK', 'TRT', 'GST', 'AST', 'WAT', 'EAT', 'BRT', 'ART', 'PET',
-    'ET', 'CT', 'MT', 'PT'
-];
-
-/**
- * Ambiguous abbreviations: maps to candidate IANA zones.
- * When chrono provides an offset, we use it to pick among the candidates
- * by matching each candidate's known offset for that abbreviation.
- */
-const AMBIGUOUS_ABBR_CANDIDATES = {
-    'CST': ['America/Chicago', 'Asia/Shanghai'],
-    'IST': ['Asia/Kolkata', 'Asia/Jerusalem', 'Europe/Dublin'],
-    'BST': ['Europe/London', 'Asia/Dhaka'],
-    'AST': ['America/Halifax', 'Asia/Riyadh'],
-    'GST': ['Asia/Dubai']
-};
-
-/**
- * Known offsets for specific abbreviations (the offset that abbreviation
- * conventionally represents, used to match against chrono's offset).
+ * Known offsets for ambiguous abbreviation candidates.
  * Maps "ABBR:IANA" -> offset in minutes.
+ * Used to disambiguate when chrono detects a timezone offset from text.
  */
 const ABBR_ZONE_OFFSETS = {
     'BST:Europe/London': 60,      // British Summer Time = UTC+1
@@ -51,37 +34,107 @@ const ABBR_ZONE_OFFSETS = {
     'IST:Europe/Dublin': 60,      // Irish Standard Time = UTC+1
     'AST:America/Halifax': -240,  // Atlantic Standard Time = UTC-4
     'AST:Asia/Riyadh': 180,       // Arabia Standard Time = UTC+3
-    'GST:Asia/Dubai': 240         // Gulf Standard Time = UTC+4
+    'GST:Asia/Dubai': 240,        // Gulf Standard Time = UTC+4
+    'SST:Pacific/Pago_Pago': -660, // Samoa Standard Time = UTC-11
 };
 
-/**
- * Regex pattern to detect a time expression in text
- * (used to reject date-only strings).
- */
-const TIME_PATTERN = /\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm|AM|PM)\b|noon|midnight/i;
+// All chrono locale parsers
+const LOCALE_PARSERS = {
+    de: chrono.de,
+    fr: chrono.fr,
+    ja: chrono.ja,
+    pt: chrono.pt,
+    nl: chrono.nl,
+    es: chrono.es,
+    zh: chrono.zh,
+    ru: chrono.ru,
+    uk: chrono.uk,
+    it: chrono.it,
+    sv: chrono.sv,
+};
+
+// Fallback locales: tried if en parser returns null (no detection cues for these)
+const FALLBACK_LOCALES = ['it', 'sv', 'uk'];
 
 /**
- * Scan text for a timezone abbreviation, skipping matches that appear
- * inside parenthetical offset patterns like (GMT-5:00) or (UTC+01:00).
- * Returns the first standalone abbreviation found (as uppercase), or null.
+ * Locale detection keyword/pattern table.
+ * Runs on original text (pre-tokenization) to preserve locale cues.
+ * Order: check each locale's patterns; first match wins.
  */
-function extractTimezoneAbbreviation(text) {
-    // Strip parenthetical offsets so we don't match GMT/UTC inside them
-    const stripped = text.replace(/\((?:GMT|UTC)\s*[+-]\s*\d{1,2}:?\d{0,2}\)/gi, '');
+const LOCALE_PATTERNS = [
+    {
+        locale: 'ja',
+        patterns: [/午後/, /午前/, /時/, /月曜/, /火曜/, /水曜/, /木曜/, /金曜/, /土曜/, /日曜/]
+    },
+    {
+        locale: 'zh',
+        patterns: [/上午/, /下午/, /星期/, /點/]
+    },
+    {
+        locale: 'ru',
+        patterns: [/утра/, /вечера/, /понедельник/, /вторник/, /среда/, /четверг/, /пятница/, /часов/, /часа/]
+    },
+    {
+        locale: 'de',
+        patterns: [/\bUhr\b/i, /\bMontag\b/i, /\bDienstag\b/i, /\bMittwoch\b/i, /\bDonnerstag\b/i, /\bFreitag\b/i, /\bSamstag\b/i, /\bSonntag\b/i, /\bMärz\b/i, /\bJanuar\b/i, /\bFebruar\b/i, /\bMEZ\b/i, /\bMESZ\b/i]
+    },
+    {
+        locale: 'fr',
+        patterns: [/\bheure\b/i, /\blundi\b/i, /\bmardi\b/i, /\bmercredi\b/i, /\bjeudi\b/i, /\bvendredi\b/i, /\bsamedi\b/i, /\bdimanche\b/i, /\bmars\b/i, /\bjanvier\b/i, /\bfévrier\b/i, /\d{1,2}h\d{2}/i]
+    },
+    {
+        locale: 'pt',
+        patterns: [/\bmanhã\b/i, /\bsegunda\b/i, /\bterça\b/i, /\bquarta\b/i, /\bquinta\b/i, /\bsexta\b/i, /\bsábado\b/i, /\bdomingo\b/i, /\bda\s+tarde\b/i, /\bda\s+manhã\b/i]
+    },
+    {
+        locale: 'nl',
+        patterns: [/\bmaandag\b/i, /\bdinsdag\b/i, /\bwoensdag\b/i, /\bdonderdag\b/i, /\bvrijdag\b/i, /\bzaterdag\b/i, /\bzondag\b/i, /\buur\b/i]
+    },
+    {
+        locale: 'es',
+        patterns: [/\btarde\b/i, /\blunes\b/i, /\bmartes\b/i, /\bmiércoles\b/i, /\bjueves\b/i, /\bviernes\b/i, /\bsábado\b/i, /\bdomingo\b/i, /\bde\s+la\s+tarde\b/i, /\bde\s+la\s+mañana\b/i]
+    },
+];
 
-    for (const abbr of TZ_ABBREVIATIONS) {
-        const regex = new RegExp('\\b' + abbr + '\\b', 'i');
-        if (regex.test(stripped)) {
-            return abbr.toUpperCase();
+/**
+ * Detect the locale of the input text by scanning for locale-specific keywords.
+ * @param {string} rawText - Original text (pre-tokenization)
+ * @returns {string} Detected locale code ('en', 'de', 'fr', etc.)
+ */
+function detectLocale(rawText) {
+    for (const { locale, patterns } of LOCALE_PATTERNS) {
+        for (const pattern of patterns) {
+            if (pattern.test(rawText)) {
+                return locale;
+            }
         }
     }
-    return null;
+    return 'en';
 }
 
 /**
- * Main parse function.
+ * Try to parse text with a chrono locale parser.
+ * Uses casual mode for non-English locales (their strict mode often rejects
+ * locale-specific idioms like "3 de la tarde" or "Montag 15:30").
+ * Returns the chrono result array or empty array.
+ */
+function parseWithLocale(locale, text) {
+    const parser = LOCALE_PARSERS[locale];
+    if (!parser) return [];
+
+    // Try casual first for non-en locales (captures locale idioms)
+    let results = parser.casual.parse(text);
+    if (results.length > 0) return results;
+
+    // Fallback to strict
+    results = parser.strict.parse(text);
+    return results;
+}
+
+/**
+ * Main parse function — 6-stage pipeline.
  *
- * @param {string} text - Raw text to parse (e.g. "12 PM (GMT-5:00) Eastern [US & Canada]")
+ * @param {string} text - Raw text to parse
  * @param {object} options
  * @param {string} options.userTimezone - User's IANA timezone (e.g. "Asia/Kolkata")
  * @returns {object|null} Parsed result or null if no time found
@@ -89,12 +142,45 @@ function extractTimezoneAbbreviation(text) {
 function parse(text, options = {}) {
     const userTimezone = options.userTimezone || 'UTC';
 
-    // Stage 1: Preprocess
-    const preprocessed = preprocess(text);
-    const { cleanedText, extractedOffset, contextClues, originalText } = preprocessed;
+    // ---- Stage 1: Sanitize ----
+    const sanitized = sanitize(text);
+    if (!sanitized) return null;
 
-    // Parse with chrono.strict (rejects bare numbers like "12")
-    const chronoResults = chrono.strict.parse(cleanedText);
+    // ---- Stage 2A: Tokenizer Phase A (non-destructive) ----
+    const { normalizedText, rawText } = tokenizePhaseA(sanitized);
+
+    // ---- Stage 3: City & Timezone Extractor ----
+    const { cleanedText, signals, normalizedInputText } = extract(normalizedText);
+
+    // ---- Stage 4: Locale Detection + Chrono Parse ----
+    const detectedLocale = detectLocale(rawText);
+
+    let chronoResults = [];
+
+    if (detectedLocale !== 'en') {
+        // Non-English locale: feed Stage 2A output (non-destructive only) to locale parser
+        chronoResults = parseWithLocale(detectedLocale, cleanedText);
+
+        // If locale parser fails, apply Stage 2B and try English
+        if (chronoResults.length === 0) {
+            const phaseBText = tokenizePhaseB(cleanedText);
+            chronoResults = chrono.strict.parse(phaseBText);
+        }
+    } else {
+        // English locale: apply Stage 2B normalization first
+        const phaseBText = tokenizePhaseB(cleanedText);
+        chronoResults = chrono.strict.parse(phaseBText);
+    }
+
+    // If still no result, try fallback locales (it, sv, uk) as last resort
+    if (chronoResults.length === 0) {
+        for (const fallbackLocale of FALLBACK_LOCALES) {
+            if (fallbackLocale === detectedLocale) continue; // already tried
+            chronoResults = parseWithLocale(fallbackLocale, cleanedText);
+            if (chronoResults.length > 0) break;
+        }
+    }
+
     if (chronoResults.length === 0) {
         return null;
     }
@@ -115,115 +201,62 @@ function parse(text, options = {}) {
     const minute = startComp.get('minute');
     const second = startComp.get('second') || 0;
 
-    // Detect timezone abbreviation from the original text
-    const abbreviation = extractTimezoneAbbreviation(originalText);
-
-    // Get chrono's timezone offset if it parsed one
-    const chronoOffset = startComp.isCertain('timezoneOffset')
-        ? startComp.get('timezoneOffset')
-        : null;
-
     // Build a rough date for timezone resolution
     const roughDate = new Date(Date.UTC(year, month, day, hour, minute, second));
 
-    // Stage 2: Resolve timezone
-    // Strategy:
-    // - If the preprocessor extracted an explicit offset (e.g. "(GMT-5:00)"),
-    //   pass it as offsetMinutes — it's authoritative user input.
-    // - If we found a text abbreviation:
-    //   a) For unambiguous abbreviations (EST, PST, etc.): resolve by abbreviation only.
-    //      Don't pass chrono's offset because it would cause the resolver to pick
-    //      a different zone via offset priority when DST shifts the actual offset.
-    //   b) For ambiguous abbreviations (BST, CST, IST, etc.): pass chrono's offset
-    //      to help disambiguate among candidates.
-    // - If no abbreviation but chrono gave us an offset, pass that offset.
-    let resolvedZone;
+    // ---- Stage 5: Timezone Resolution ----
+    const resolved = resolveTimezone({
+        signals,
+        parsedDate: roughDate,
+        userTimezone,
+    });
 
-    if (extractedOffset !== null) {
-        // Preprocessor found an explicit offset like (GMT-5:00)
-        resolvedZone = resolveTimezone({
-            abbreviation,
-            offsetMinutes: extractedOffset,
-            contextClues,
-            parsedDate: roughDate,
-            userTimezone
-        });
-    } else if (abbreviation && AMBIGUOUS_ABBR_CANDIDATES[abbreviation]) {
-        // Ambiguous abbreviation — first try resolving by abbreviation + context clues
-        resolvedZone = resolveTimezone({
-            abbreviation,
-            offsetMinutes: null,
-            contextClues,
-            parsedDate: roughDate,
-            userTimezone
-        });
-        // If chrono gave us an offset, validate/correct the resolution by matching
-        // the offset against the known offsets for each candidate zone.
-        // This handles cases like BST (user in Asia) where region-matching picks
-        // Asia/Dhaka but chrono's +60 offset tells us it's Europe/London.
-        if (chronoOffset !== null) {
-            const candidates = AMBIGUOUS_ABBR_CANDIDATES[abbreviation];
-            for (const zone of candidates) {
-                const key = abbreviation + ':' + zone;
-                const knownOffset = ABBR_ZONE_OFFSETS[key];
-                if (knownOffset !== undefined && knownOffset === chronoOffset) {
-                    resolvedZone = zone;
-                    break;
+    let effectiveZone = resolved.zone;
+    let confidence = resolved.confidence;
+    let confidenceDetail = resolved.confidenceDetail;
+
+    // Chrono offset disambiguation for ambiguous abbreviations:
+    // If Stage 3 found an ambiguous abbreviation, try parsing the pre-extraction text
+    // through chrono to get its timezone offset interpretation. This helps disambiguate
+    // cases like BST where chrono knows the offset is +1 (Europe/London) not +6 (Asia/Dhaka).
+    if (signals.abbreviation && AMBIGUOUS_ABBREVIATIONS[signals.abbreviation] && confidence === 'medium') {
+        const chronoWithAbbr = chrono.strict.parse(normalizedInputText);
+        if (chronoWithAbbr.length > 0) {
+            const abbrStart = chronoWithAbbr[0].start;
+            const chronoOffset = abbrStart.isCertain('timezoneOffset')
+                ? abbrStart.get('timezoneOffset')
+                : null;
+            if (chronoOffset !== null) {
+                const ambiguous = AMBIGUOUS_ABBREVIATIONS[signals.abbreviation];
+                const candidates = Object.keys(ambiguous.candidates);
+                for (const zone of candidates) {
+                    const key = signals.abbreviation + ':' + zone;
+                    const knownOffset = ABBR_ZONE_OFFSETS[key];
+                    if (knownOffset !== undefined && knownOffset === chronoOffset) {
+                        effectiveZone = zone;
+                        confidence = 'high';
+                        confidenceDetail = `Detected ${signals.abbreviation} (${zone}) via chrono offset`;
+                        break;
+                    }
                 }
             }
         }
-    } else if (abbreviation) {
-        // Unambiguous abbreviation — resolve by abbreviation only
-        resolvedZone = resolveTimezone({
-            abbreviation,
-            offsetMinutes: null,
-            contextClues,
-            parsedDate: roughDate,
-            userTimezone
-        });
-    } else if (chronoOffset !== null) {
-        // No abbreviation in text, but chrono parsed an offset
-        resolvedZone = resolveTimezone({
-            abbreviation: null,
-            offsetMinutes: chronoOffset,
-            contextClues,
-            parsedDate: roughDate,
-            userTimezone
-        });
-    } else {
-        // No timezone info at all
-        resolvedZone = resolveTimezone({
-            abbreviation: null,
-            offsetMinutes: null,
-            contextClues,
-            parsedDate: roughDate,
-            userTimezone
-        });
     }
 
-    // Determine confidence
-    const confidence = resolvedZone ? 'high' : 'low';
-
-    // The timezone to use for date construction
-    const effectiveZone = resolvedZone || userTimezone;
-
-    // Stage 4: Construct the UTC date
-    // When we have an explicit offset from the preprocessor (e.g. "(GMT-5:00)"),
-    // use the offset directly for UTC computation. This is because the user
-    // specified a fixed offset, and the resolved zone might currently observe
-    // a different offset due to DST (e.g. New York in summer is EDT/-4 not EST/-5).
+    // ---- Stage 6: Date Construction ----
     let utcDate;
-    if (extractedOffset !== null) {
+    if (signals.offset !== null) {
         // Direct offset computation: wallTime - offset = UTC
         const wallMs = Date.UTC(year, month, day, hour, minute, second);
-        utcDate = new Date(wallMs - extractedOffset * 60000);
+        utcDate = new Date(wallMs - signals.offset * 60000);
     } else {
         utcDate = constructDateInTimezone(year, month, day, hour, minute, second, effectiveZone);
     }
 
-    // Check if this is a range (chrono natively detects ranges with - / to / through)
+    // Check if this is a range
     const isRange = chronoResult.end !== null && chronoResult.end !== undefined;
     let rangeEndUtcDate = null;
+    let rangeEndWallClock = null;
 
     if (isRange) {
         const endComp = chronoResult.end;
@@ -235,44 +268,42 @@ function parse(text, options = {}) {
         const endSecond = endComp.get('second') || 0;
 
         // Cross-midnight: if end time < start time, advance end day by 1
-        // Use constructDateInTimezone (not raw ms math) as per requirements
         if (endHour < hour || (endHour === hour && endMinute < minute)) {
             endDay += 1;
         }
 
-        if (extractedOffset !== null) {
+        if (signals.offset !== null) {
             const endWallMs = Date.UTC(endYear, endMonth, endDay, endHour, endMinute, endSecond);
-            rangeEndUtcDate = new Date(endWallMs - extractedOffset * 60000);
+            rangeEndUtcDate = new Date(endWallMs - signals.offset * 60000);
         } else {
             rangeEndUtcDate = constructDateInTimezone(
                 endYear, endMonth, endDay, endHour, endMinute, endSecond, effectiveZone
             );
         }
+
+        rangeEndWallClock = {
+            year: endYear,
+            month: endMonth,
+            day: endDay,
+            hour: endHour,
+            minute: endMinute,
+            second: endSecond,
+        };
     }
 
     return {
         utcDate,
         sourceTimezone: effectiveZone,
         confidence,
+        confidenceDetail,
         isRange,
         rangeEndUtcDate,
-        // When user explicitly stated an offset like (GMT-5:00), carry it
-        // so the UI shows "UTC-05:00" instead of the zone's current DST label
-        explicitOffset: extractedOffset,
-        // Carry original wall-clock components so the UI can display
-        // what the user typed (e.g. "12 PM") rather than reformatting
-        // through the zone's current DST offset (which could show "1 PM")
-        // Whether the user explicitly provided a date (vs chrono defaulting to today)
+        explicitOffset: signals.offset,
         hasExplicitDate: startComp.isCertain('day') || startComp.isCertain('month') || startComp.isCertain('year'),
         wallClock: { year, month, day, hour, minute, second },
-        rangeEndWallClock: isRange ? {
-            year: chronoResult.end.get('year'),
-            month: chronoResult.end.get('month') - 1,
-            day: chronoResult.end.get('day'),
-            hour: chronoResult.end.get('hour'),
-            minute: chronoResult.end.get('minute'),
-            second: chronoResult.end.get('second') || 0
-        } : null
+        rangeEndWallClock,
+        detectedLocale,
+        cityMatch: signals.cityMatch || null,
     };
 }
 

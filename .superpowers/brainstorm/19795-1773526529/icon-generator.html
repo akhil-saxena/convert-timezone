@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>TimeShift Icon Generator</title>
+<style>
+  body { background: #111; color: #eee; font-family: system-ui; padding: 32px; }
+  h2 { color: #fff; margin-bottom: 8px; }
+  .subtitle { color: #999; margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+  .variant { background: #1a1a2e; border-radius: 16px; padding: 24px; border: 2px solid transparent; cursor: pointer; transition: border-color 0.2s; }
+  .variant:hover { border-color: #667eea; }
+  .variant.selected { border-color: #667eea; box-shadow: 0 0 20px rgba(102,126,234,0.3); }
+  .variant h3 { margin: 16px 0 4px; color: #fff; }
+  .variant p { color: #aaa; font-size: 13px; margin: 0; }
+  .sizes { display: flex; align-items: center; gap: 20px; justify-content: center; margin-top: 12px; }
+  .sizes span { color: #666; font-size: 11px; }
+  canvas { display: block; }
+  .canvas-row { display: flex; align-items: flex-end; gap: 16px; justify-content: center; }
+</style>
+</head>
+<body>
+<h2>TimeShift Icon — Programmatic Generation</h2>
+<p class="subtitle">Each icon is drawn with precise math. Click to select. Shown at 128, 48, and 16px.</p>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const VARIANTS = [
+  {
+    name: 'Clean Orbit Arc',
+    desc: 'Precise quarter-arc arrow from 12→3, constant gap from clock. Thin elegant stroke.',
+    clockRadius: 0.42,
+    orbitGap: 0.12,
+    arcStart: -90,    // 12 o'clock
+    arcEnd: 0,        // 3 o'clock
+    clockStroke: 3,
+    arrowStroke: 2.5,
+    handHour: { angle: -60, len: 0.55 },   // ~10 o'clock
+    handMin: { angle: 30, len: 0.7 },      // ~1 o'clock
+    arrowOpacity: 0.85,
+    cornerRadius: 0.22,
+    showTicks: true
+  },
+  {
+    name: 'Bold Swoosh',
+    desc: 'Thicker arrow, slightly longer arc (11→3). More visual weight, stands out in toolbar.',
+    clockRadius: 0.38,
+    orbitGap: 0.14,
+    arcStart: -120,   // 11 o'clock
+    arcEnd: 0,        // 3 o'clock
+    clockStroke: 3.5,
+    arrowStroke: 3.5,
+    handHour: { angle: -60, len: 0.55 },
+    handMin: { angle: 60, len: 0.7 },      // ~2 o'clock
+    arrowOpacity: 0.9,
+    cornerRadius: 0.22,
+    showTicks: false
+  },
+  {
+    name: 'Minimal Shift',
+    desc: 'No clock circle — just hands + a floating arc. Ultra-minimal, modern feel.',
+    clockRadius: 0,
+    orbitGap: 0,
+    arcStart: -90,
+    arcEnd: 10,
+    clockStroke: 0,
+    arrowStroke: 3,
+    handHour: { angle: -50, len: 0.32 },
+    handMin: { angle: 40, len: 0.4 },
+    arrowOpacity: 0.85,
+    cornerRadius: 0.22,
+    showTicks: false,
+    freeArcRadius: 0.38,
+    handStroke: 4.5
+  },
+  {
+    name: 'Double Arrow',
+    desc: 'Two short arcs — clockwise top-right and counter-clockwise bottom-left. Suggests bidirectional conversion.',
+    clockRadius: 0.36,
+    orbitGap: 0.13,
+    arcStart: -90,
+    arcEnd: -10,
+    clockStroke: 3,
+    arrowStroke: 2.5,
+    handHour: { angle: -60, len: 0.55 },
+    handMin: { angle: 30, len: 0.7 },
+    arrowOpacity: 0.8,
+    cornerRadius: 0.22,
+    showTicks: true,
+    secondArc: true,
+    arc2Start: 90,
+    arc2End: 170
+  }
+];
+
+function drawIcon(canvas, size, v) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = size;
+  canvas.height = size;
+  const s = size; // shorthand
+  const cx = s / 2, cy = s / 2;
+
+  // Scale strokes for small sizes
+  const scale = size / 128;
+  const strokeScale = Math.max(scale, 0.4);
+
+  // Background rounded rect with gradient
+  const grad = ctx.createLinearGradient(0, 0, s, s);
+  grad.addColorStop(0, '#667eea');
+  grad.addColorStop(1, '#764ba2');
+
+  const r = s * v.cornerRadius;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, s, s, r);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Clock circle
+  const clockR = s * v.clockRadius;
+  if (clockR > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, clockR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = v.clockStroke * strokeScale;
+    ctx.stroke();
+  }
+
+  // Tick marks at 12, 3, 6, 9
+  if (v.showTicks && clockR > 0) {
+    const tickLen = s * 0.03;
+    const tickInset = clockR - tickLen;
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1.8 * strokeScale;
+    ctx.lineCap = 'round';
+    for (let a = 0; a < 4; a++) {
+      const angle = (a * 90 - 90) * Math.PI / 180;
+      const x1 = cx + Math.cos(angle) * tickInset;
+      const y1 = cy + Math.sin(angle) * tickInset;
+      const x2 = cx + Math.cos(angle) * clockR;
+      const y2 = cy + Math.sin(angle) * clockR;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+  }
+
+  // Clock hands
+  const hStroke = (v.handStroke || 4) * strokeScale;
+  const mStroke = (v.handStroke || 3) * strokeScale;
+  const handBase = clockR > 0 ? clockR : s * 0.4;
+
+  // Hour hand
+  const hAngle = v.handHour.angle * Math.PI / 180;
+  const hLen = handBase * v.handHour.len;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(hAngle) * hLen, cy + Math.sin(hAngle) * hLen);
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = hStroke;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Minute hand
+  const mAngle = v.handMin.angle * Math.PI / 180;
+  const mLen = handBase * v.handMin.len;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(mAngle) * mLen, cy + Math.sin(mAngle) * mLen);
+  ctx.lineWidth = mStroke;
+  ctx.stroke();
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5 * strokeScale, 0, Math.PI * 2);
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  // Orbit arc arrow
+  const arcR = v.freeArcRadius ? s * v.freeArcRadius : clockR + s * v.orbitGap;
+  const startRad = v.arcStart * Math.PI / 180;
+  const endRad = v.arcEnd * Math.PI / 180;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, arcR, startRad, endRad);
+  ctx.strokeStyle = `rgba(255,255,255,${v.arrowOpacity})`;
+  ctx.lineWidth = v.arrowStroke * strokeScale;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Arrowhead at end of arc (tangent direction)
+  const arrowSize = 6 * strokeScale;
+  const endX = cx + Math.cos(endRad) * arcR;
+  const endY = cy + Math.sin(endRad) * arcR;
+  // Tangent at end of arc (perpendicular to radius, clockwise)
+  const tangentAngle = endRad + Math.PI / 2;
+  const backAngle1 = tangentAngle - 2.6;
+  const backAngle2 = tangentAngle + 0.5;
+
+  ctx.beginPath();
+  ctx.moveTo(endX + Math.cos(backAngle1) * arrowSize, endY + Math.sin(backAngle1) * arrowSize);
+  ctx.lineTo(endX, endY);
+  ctx.lineTo(endX + Math.cos(backAngle2) * arrowSize, endY + Math.sin(backAngle2) * arrowSize);
+  ctx.strokeStyle = `rgba(255,255,255,${v.arrowOpacity})`;
+  ctx.lineWidth = v.arrowStroke * strokeScale * 0.85;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Second arc (for double arrow variant)
+  if (v.secondArc) {
+    const s2Start = v.arc2Start * Math.PI / 180;
+    const s2End = v.arc2End * Math.PI / 180;
+    ctx.beginPath();
+    ctx.arc(cx, cy, arcR, s2Start, s2End);
+    ctx.strokeStyle = `rgba(255,255,255,${v.arrowOpacity})`;
+    ctx.lineWidth = v.arrowStroke * strokeScale;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Arrowhead for second arc
+    const end2X = cx + Math.cos(s2End) * arcR;
+    const end2Y = cy + Math.sin(s2End) * arcR;
+    const tang2 = s2End + Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(end2X + Math.cos(tang2 - 2.6) * arrowSize, end2Y + Math.sin(tang2 - 2.6) * arrowSize);
+    ctx.lineTo(end2X, end2Y);
+    ctx.lineTo(end2X + Math.cos(tang2 + 0.5) * arrowSize, end2Y + Math.sin(tang2 + 0.5) * arrowSize);
+    ctx.stroke();
+  }
+}
+
+// Build the grid
+const grid = document.getElementById('grid');
+VARIANTS.forEach((v, i) => {
+  const div = document.createElement('div');
+  div.className = 'variant';
+  div.onclick = () => {
+    document.querySelectorAll('.variant').forEach(el => el.classList.remove('selected'));
+    div.classList.add('selected');
+  };
+
+  const row = document.createElement('div');
+  row.className = 'canvas-row';
+
+  [128, 48, 16].forEach(size => {
+    const wrap = document.createElement('div');
+    wrap.style.textAlign = 'center';
+    const c = document.createElement('canvas');
+    c.style.borderRadius = (size * 0.22) + 'px';
+    drawIcon(c, size, v);
+    wrap.appendChild(c);
+    const label = document.createElement('span');
+    label.style.cssText = 'display:block;color:#666;font-size:11px;margin-top:4px;';
+    label.textContent = size + 'px';
+    wrap.appendChild(label);
+    row.appendChild(wrap);
+  });
+
+  div.appendChild(row);
+
+  const h3 = document.createElement('h3');
+  h3.textContent = v.name;
+  div.appendChild(h3);
+
+  const p = document.createElement('p');
+  p.textContent = v.desc;
+  div.appendChild(p);
+
+  grid.appendChild(div);
+});
+</script>
+</body>
+</html>

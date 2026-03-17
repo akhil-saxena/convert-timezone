@@ -1,133 +1,124 @@
-const UNAMBIGUOUS_ABBREVIATIONS = {
-    'EST': 'America/New_York', 'EDT': 'America/New_York', 'ET': 'America/New_York',
-    'CST': 'America/Chicago', 'CDT': 'America/Chicago', 'CT': 'America/Chicago',
-    'MST': 'America/Denver', 'MDT': 'America/Denver', 'MT': 'America/Denver',
-    'PST': 'America/Los_Angeles', 'PDT': 'America/Los_Angeles', 'PT': 'America/Los_Angeles',
-    'AKST': 'America/Anchorage', 'AKDT': 'America/Anchorage', 'HST': 'Pacific/Honolulu',
-    'UTC': 'UTC', 'GMT': 'UTC',
-    'BST': 'Europe/London', 'IST': 'Asia/Kolkata',
-    'CET': 'Europe/Paris', 'CEST': 'Europe/Paris',
-    'EET': 'Europe/Helsinki', 'EEST': 'Europe/Helsinki',
-    'JST': 'Asia/Tokyo', 'KST': 'Asia/Seoul', 'SGT': 'Asia/Singapore',
-    'HKT': 'Asia/Hong_Kong', 'ICT': 'Asia/Bangkok', 'WIB': 'Asia/Jakarta',
-    'PHT': 'Asia/Manila', 'NZST': 'Pacific/Auckland', 'NZDT': 'Pacific/Auckland',
-    'AEST': 'Australia/Sydney', 'AEDT': 'Australia/Sydney',
-    'ACST': 'Australia/Adelaide', 'ACDT': 'Australia/Adelaide', 'AWST': 'Australia/Perth',
-    'MSK': 'Europe/Moscow', 'TRT': 'Europe/Istanbul',
-    'GST': 'Asia/Dubai', 'AST': 'America/Halifax',
-    'SAST': 'Africa/Johannesburg', 'WAT': 'Africa/Lagos', 'EAT': 'Africa/Nairobi',
-    'IRST': 'Asia/Tehran', 'BRT': 'America/Sao_Paulo',
-    'ART': 'America/Argentina/Buenos_Aires', 'PET': 'America/Lima'
-};
+const {
+    ABBREVIATION_MAP,
+    AMBIGUOUS_ABBREVIATIONS,
+    VERBOSE_TIMEZONE_MAP,
+    REGION_CONTEXT_MAP,
+    OFFSET_PRIORITY
+} = require('./timezone-data.js');
 
-const AMBIGUOUS_ABBREVIATIONS = {
-    'CST': {
-        candidates: {
-            'America/Chicago': ['US', 'USA', 'America', 'United States', 'Chicago', 'Central'],
-            'Asia/Shanghai': ['China', 'Shanghai', 'Beijing', 'Chinese']
-        },
-        default: 'America/Chicago'
-    },
-    'IST': {
-        candidates: {
-            'Asia/Kolkata': ['India', 'Indian', 'Kolkata', 'Mumbai', 'Delhi', 'Bangalore'],
-            'Asia/Jerusalem': ['Israel', 'Israeli', 'Jerusalem', 'Tel Aviv'],
-            'Europe/Dublin': ['Ireland', 'Irish', 'Dublin']
-        },
-        default: 'Asia/Kolkata'
-    },
-    'BST': {
-        candidates: {
-            'Europe/London': ['UK', 'Britain', 'British', 'England', 'London'],
-            'Asia/Dhaka': ['Bangladesh', 'Dhaka']
-        },
-        default: 'Europe/London'
-    },
-    'AST': {
-        candidates: {
-            'America/Halifax': ['Atlantic', 'Canada', 'Halifax', 'US', 'America'],
-            'Asia/Riyadh': ['Arabia', 'Saudi', 'Riyadh']
-        },
-        default: 'America/Halifax'
-    },
-    'GST': {
-        candidates: {
-            'Asia/Dubai': ['Gulf', 'Dubai', 'UAE', 'Abu Dhabi'],
-        },
-        default: 'Asia/Dubai'
+/**
+ * Resolve a timezone from extraction signals.
+ *
+ * New API (signals-based):
+ *   resolveTimezone({ signals, parsedDate, userTimezone })
+ *   Returns { zone, confidence, confidenceDetail }
+ *
+ * Legacy API (backward compatible):
+ *   resolveTimezone({ abbreviation, offsetMinutes, contextClues, parsedDate, userTimezone })
+ *   Returns a zone string (or null)
+ */
+function resolveTimezone(args) {
+    // Detect old-style call: has 'abbreviation' key directly (not nested in signals)
+    if ('abbreviation' in args && !('signals' in args)) {
+        return resolveTimezoneLegacy(args);
     }
-};
 
-const OFFSET_PRIORITY = {
-    '-600': ['Pacific/Honolulu'],
-    '-540': ['America/Anchorage'],
-    '-480': ['America/Los_Angeles', 'America/Vancouver'],
-    '-420': ['America/Denver', 'America/Phoenix', 'America/Edmonton'],
-    '-360': ['America/Chicago', 'America/Winnipeg', 'America/Mexico_City'],
-    '-300': ['America/New_York', 'America/Toronto', 'America/Chicago', 'America/Lima'],
-    '-240': ['America/Halifax'],
-    '-180': ['America/Sao_Paulo', 'America/Argentina/Buenos_Aires'],
-    '0': ['UTC', 'Europe/London'],
-    '60': ['Europe/Paris', 'Europe/Berlin', 'Africa/Lagos'],
-    '120': ['Europe/Helsinki', 'Europe/Athens', 'Africa/Cairo', 'Africa/Johannesburg'],
-    '180': ['Europe/Moscow', 'Europe/Istanbul', 'Asia/Riyadh', 'Africa/Nairobi'],
-    '210': ['Asia/Tehran'],
-    '240': ['Asia/Dubai'],
-    '270': ['Asia/Kabul'],
-    '300': ['Asia/Karachi'],
-    '330': ['Asia/Kolkata'],
-    '345': ['Asia/Kathmandu'],
-    '360': ['Asia/Dhaka'],
-    '390': ['Asia/Yangon'],
-    '420': ['Asia/Bangkok', 'Asia/Jakarta'],
-    '480': ['Asia/Shanghai', 'Asia/Singapore', 'Asia/Hong_Kong', 'Asia/Taipei', 'Australia/Perth'],
-    '540': ['Asia/Tokyo', 'Asia/Seoul'],
-    '570': ['Australia/Adelaide'],
-    '600': ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane'],
-    '660': ['Pacific/Noumea'],
-    '720': ['Pacific/Auckland'],
-    '780': ['Pacific/Apia']
-};
+    const { signals, parsedDate, userTimezone } = args;
+    const {
+        offset = null,
+        verboseName = null,
+        cityMatch = null,
+        cityZone = null,
+        abbreviation = null,
+        contextClues = []
+    } = signals || {};
 
-const VERBOSE_TIMEZONE_MAP = {
-    'Eastern Time': 'America/New_York',
-    'Eastern Standard Time': 'America/New_York',
-    'Eastern Daylight Time': 'America/New_York',
-    'Central Time': 'America/Chicago',
-    'Central Standard Time': 'America/Chicago',
-    'Central Daylight Time': 'America/Chicago',
-    'Mountain Time': 'America/Denver',
-    'Mountain Standard Time': 'America/Denver',
-    'Mountain Daylight Time': 'America/Denver',
-    'Pacific Time': 'America/Los_Angeles',
-    'Pacific Standard Time': 'America/Los_Angeles',
-    'Pacific Daylight Time': 'America/Los_Angeles',
-    'Greenwich Mean Time': 'UTC',
-    'Coordinated Universal Time': 'UTC',
-    'Central European Time': 'Europe/Paris',
-    'Central European Summer Time': 'Europe/Paris',
-    'Eastern European Time': 'Europe/Helsinki',
-    'Eastern European Summer Time': 'Europe/Helsinki',
-    'British Summer Time': 'Europe/London',
-    'India Standard Time': 'Asia/Kolkata',
-    'Japan Standard Time': 'Asia/Tokyo',
-    'China Standard Time': 'Asia/Shanghai',
-    'Australian Eastern Standard Time': 'Australia/Sydney',
-    'Australian Eastern Daylight Time': 'Australia/Sydney',
-    'New Zealand Standard Time': 'Pacific/Auckland',
-    'New Zealand Daylight Time': 'Pacific/Auckland'
-};
+    // Priority 1: Explicit offset (GMT-5, UTC+5:30) — highest, unambiguous
+    if (offset !== null) {
+        const resolved = resolveFromOffset(offset, contextClues, parsedDate, userTimezone);
+        if (resolved) {
+            return {
+                zone: resolved,
+                confidence: 'high',
+                confidenceDetail: `Resolved from explicit offset (UTC${offset >= 0 ? '+' : ''}${offset / 60})`
+            };
+        }
+    }
 
-const REGION_CONTEXT_MAP = {
-    'Eastern': 'America/New_York',
-    'Western': 'America/Los_Angeles',
-    'Central': 'America/Chicago',
-    'Pacific': 'America/Los_Angeles',
-    'Mountain': 'America/Denver',
-    'Atlantic': 'America/Halifax'
-};
+    // Priority 2: Verbose timezone name — unambiguous
+    if (verboseName) {
+        const verboseMatch = VERBOSE_TIMEZONE_MAP[verboseName];
+        if (verboseMatch) {
+            return {
+                zone: verboseMatch,
+                confidence: 'high',
+                confidenceDetail: `Detected ${verboseName}`
+            };
+        }
+    }
 
-function resolveTimezone({ abbreviation, offsetMinutes, contextClues, parsedDate, userTimezone }) {
+    // Priority 3: City/country match — unambiguous (from Stage 3 cityZone)
+    if (cityZone) {
+        return {
+            zone: cityZone,
+            confidence: 'high',
+            confidenceDetail: `Matched city: ${cityMatch || 'unknown'} (${cityZone})`
+        };
+    }
+
+    // Priority 4 & 5: Abbreviation resolution
+    if (abbreviation) {
+        const upper = abbreviation.toUpperCase();
+        const ambiguous = AMBIGUOUS_ABBREVIATIONS[upper];
+
+        if (ambiguous) {
+            // Priority 5: Ambiguous abbreviation — medium confidence
+            const resolved = resolveAmbiguousAbbreviation(upper, ambiguous, contextClues, userTimezone);
+            return {
+                zone: resolved,
+                confidence: 'medium',
+                confidenceDetail: contextClues.length > 0
+                    ? `Resolved ${upper} via context clues (${resolved})`
+                    : `Assumed ${upper} -> ${resolved} (ambiguous, no context clues)`
+            };
+        }
+
+        // Priority 4: Unambiguous abbreviation — high confidence
+        const unambiguous = ABBREVIATION_MAP[upper];
+        if (unambiguous) {
+            return {
+                zone: unambiguous,
+                confidence: 'high',
+                confidenceDetail: `Detected ${upper} (${unambiguous})`
+            };
+        }
+    }
+
+    // Check region context clues as last signal-based attempt
+    for (const clue of contextClues) {
+        const regionMatch = REGION_CONTEXT_MAP[clue];
+        if (regionMatch) {
+            return {
+                zone: regionMatch,
+                confidence: 'medium',
+                confidenceDetail: `Inferred from region context: ${clue}`
+            };
+        }
+    }
+
+    // Priority 6: User timezone fallback — lowest, no signal found
+    return {
+        zone: userTimezone,
+        confidence: 'low',
+        confidenceDetail: `No timezone in input, using ${userTimezone}`
+    };
+}
+
+/**
+ * Legacy API — preserves exact old behavior, returns zone string or null.
+ */
+function resolveTimezoneLegacy({ abbreviation, offsetMinutes, contextClues, parsedDate, userTimezone }) {
+    // Check verbose names in context clues
     for (const clue of contextClues) {
         const verboseMatch = VERBOSE_TIMEZONE_MAP[clue];
         if (verboseMatch) return verboseMatch;
@@ -168,25 +159,39 @@ function resolveFromOffset(offsetMinutes, contextClues, parsedDate, userTimezone
     return resolveFromOffsetFallback(offsetMinutes, parsedDate, userTimezone);
 }
 
+/**
+ * Resolve an ambiguous abbreviation using context clues, user timezone, and defaults.
+ */
+function resolveAmbiguousAbbreviation(abbr, ambiguous, contextClues, userTimezone) {
+    // Try context clue match
+    for (const [zone, keywords] of Object.entries(ambiguous.candidates)) {
+        for (const clue of contextClues) {
+            if (keywords.some(kw => kw.toLowerCase() === clue.toLowerCase())) return zone;
+        }
+    }
+    // Try exact user timezone match
+    for (const [zone] of Object.entries(ambiguous.candidates)) {
+        if (userTimezone === zone) return zone;
+    }
+    // Try user region match
+    const userRegion = userTimezone.split('/')[0];
+    for (const [zone] of Object.entries(ambiguous.candidates)) {
+        const zoneRegion = zone.split('/')[0];
+        if (userRegion === zoneRegion) return zone;
+    }
+    return ambiguous.default;
+}
+
+/**
+ * Legacy abbreviation resolution — handles both ambiguous and unambiguous.
+ * Uses the old inline UNAMBIGUOUS_ABBREVIATIONS map behavior via ABBREVIATION_MAP.
+ */
 function resolveFromAbbreviation(abbr, contextClues, userTimezone) {
     const ambiguous = AMBIGUOUS_ABBREVIATIONS[abbr];
     if (ambiguous) {
-        for (const [zone, keywords] of Object.entries(ambiguous.candidates)) {
-            for (const clue of contextClues) {
-                if (keywords.some(kw => kw.toLowerCase() === clue.toLowerCase())) return zone;
-            }
-        }
-        for (const [zone] of Object.entries(ambiguous.candidates)) {
-            if (userTimezone === zone) return zone;
-        }
-        const userRegion = userTimezone.split('/')[0];
-        for (const [zone] of Object.entries(ambiguous.candidates)) {
-            const zoneRegion = zone.split('/')[0];
-            if (userRegion === zoneRegion) return zone;
-        }
-        return ambiguous.default;
+        return resolveAmbiguousAbbreviation(abbr, ambiguous, contextClues, userTimezone);
     }
-    return UNAMBIGUOUS_ABBREVIATIONS[abbr] || null;
+    return ABBREVIATION_MAP[abbr] || null;
 }
 
 function getOffsetAtDate(ianaZone, date) {

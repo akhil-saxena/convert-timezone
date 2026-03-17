@@ -1,0 +1,131 @@
+<h2>Icon A v3 — Short orbit arrow (12 to 3)</h2>
+<p class="subtitle">Arrow is a quarter-arc from 12 o'clock to 3 o'clock, at a fixed orbit distance from the clock circle.</p>
+
+<div class="cards">
+  <div class="card" data-choice="v3" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;gap:32px;padding:24px;background:#1a1a2e;">
+      <!-- 128px -->
+      <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg3" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg3)"/>
+        <!-- Clock circle r=30, center at 64,64 -->
+        <circle cx="64" cy="64" r="30" stroke="white" stroke-width="3.5" fill="none"/>
+        <!-- Hour hand pointing to ~10 o'clock -->
+        <line x1="64" y1="64" x2="52" y2="44" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <!-- Minute hand pointing to ~2 o'clock -->
+        <line x1="64" y1="64" x2="78" y2="54" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <!-- Center dot -->
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <!-- Hour ticks at 12, 3, 6, 9 -->
+        <line x1="64" y1="36" x2="64" y2="39" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="92" y1="64" x2="89" y2="64" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="64" y1="92" x2="64" y2="89" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="36" y1="64" x2="39" y2="64" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <!-- Orbit arrow: r=42 (12px gap from clock r=30), arc from 12 to 3 o'clock
+             12 o'clock on circle r=42 centered at 64,64: (64, 22)
+             3 o'clock on circle r=42: (106, 64) -->
+        <path d="M 64 22 A 42 42 0 0 1 106 64" stroke="rgba(255,255,255,0.8)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <!-- Arrowhead at 3 o'clock position, pointing downward (tangent to arc) -->
+        <path d="M 102 57 L 106 64 L 99 63" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <!-- 48px -->
+      <svg width="48" height="48" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg3s" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg3s)"/>
+        <circle cx="64" cy="64" r="30" stroke="white" stroke-width="3.5" fill="none"/>
+        <line x1="64" y1="64" x2="52" y2="44" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="78" y2="54" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <path d="M 64 22 A 42 42 0 0 1 106 64" stroke="rgba(255,255,255,0.8)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 102 57 L 106 64 L 99 63" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <!-- 16px -->
+      <svg width="16" height="16" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg3t" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg3t)"/>
+        <circle cx="64" cy="64" r="30" stroke="white" stroke-width="5" fill="none"/>
+        <line x1="64" y1="64" x2="52" y2="44" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="78" y2="54" stroke="white" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="4" fill="white"/>
+        <path d="M 64 22 A 42 42 0 0 1 106 64" stroke="rgba(255,255,255,0.9)" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 100 54 L 106 64 L 97 62" stroke="rgba(255,255,255,0.9)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>12px orbit gap</h3>
+      <p>Clock r=30, orbit r=42. Clean quarter-arc from 12 to 3 with open arrowhead.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="v3b" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;gap:32px;padding:24px;background:#1a1a2e;">
+      <!-- 128px - tighter gap -->
+      <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg4" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg4)"/>
+        <!-- Clock r=28 -->
+        <circle cx="64" cy="64" r="28" stroke="white" stroke-width="3.5" fill="none"/>
+        <line x1="64" y1="64" x2="52" y2="46" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="76" y2="55" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <line x1="64" y1="38" x2="64" y2="41" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="90" y1="64" x2="87" y2="64" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="64" y1="90" x2="64" y2="87" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="38" y1="64" x2="41" y2="64" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <!-- Orbit r=38 (10px gap), 12 to 3 -->
+        <path d="M 64 26 A 38 38 0 0 1 102 64" stroke="rgba(255,255,255,0.8)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 98 57 L 102 64 L 95 63" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <!-- 48px -->
+      <svg width="48" height="48" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg4s" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg4s)"/>
+        <circle cx="64" cy="64" r="28" stroke="white" stroke-width="3.5" fill="none"/>
+        <line x1="64" y1="64" x2="52" y2="46" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="76" y2="55" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="3" fill="white"/>
+        <path d="M 64 26 A 38 38 0 0 1 102 64" stroke="rgba(255,255,255,0.8)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 98 57 L 102 64 L 95 63" stroke="rgba(255,255,255,0.8)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <!-- 16px -->
+      <svg width="16" height="16" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg4t" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#bg4t)"/>
+        <circle cx="64" cy="64" r="28" stroke="white" stroke-width="5" fill="none"/>
+        <line x1="64" y1="64" x2="52" y2="46" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <line x1="64" y1="64" x2="76" y2="55" stroke="white" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="64" cy="64" r="4" fill="white"/>
+        <path d="M 64 26 A 38 38 0 0 1 102 64" stroke="rgba(255,255,255,0.9)" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 96 54 L 102 64 L 93 62" stroke="rgba(255,255,255,0.9)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>10px orbit gap</h3>
+      <p>Clock r=28, orbit r=38. Tighter, more compact. Arrow feels more integrated with the clock.</p>
+    </div>
+  </div>
+</div>

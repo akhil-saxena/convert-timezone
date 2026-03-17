@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Minimal Shift — Arrowhead Fix</title>
+<style>
+  body { background: #111; color: #eee; font-family: system-ui; padding: 32px; }
+  h2 { color: #fff; margin-bottom: 8px; }
+  .subtitle { color: #999; margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+  .variant { background: #1a1a2e; border-radius: 16px; padding: 24px; border: 2px solid transparent; cursor: pointer; transition: border-color 0.2s; }
+  .variant:hover { border-color: #667eea; }
+  .variant.selected { border-color: #667eea; box-shadow: 0 0 20px rgba(102,126,234,0.3); }
+  .variant h3 { margin: 16px 0 4px; color: #fff; }
+  .variant p { color: #aaa; font-size: 13px; margin: 0; }
+  .canvas-row { display: flex; align-items: flex-end; gap: 16px; justify-content: center; }
+</style>
+</head>
+<body>
+<h2>Minimal Shift — Arrowhead Variants</h2>
+<p class="subtitle">Same icon, different arrowhead styles. Pick the clearest one.</p>
+
+<div class="grid" id="grid"></div>
+
+<script>
+function drawIcon(canvas, size, opts) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = size;
+  canvas.height = size;
+  const s = size;
+  const cx = s / 2, cy = s / 2;
+  const scale = size / 128;
+  const strokeScale = Math.max(scale, 0.4);
+
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, s, s);
+  grad.addColorStop(0, '#667eea');
+  grad.addColorStop(1, '#764ba2');
+  ctx.beginPath();
+  ctx.roundRect(0, 0, s, s, s * 0.22);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Clock hands (no circle)
+  const handBase = s * 0.4;
+  const hStroke = 4.5 * strokeScale;
+  const mStroke = 3.5 * strokeScale;
+
+  // Hour hand ~ 10 o'clock
+  const hAngle = -50 * Math.PI / 180;
+  const hLen = handBase * 0.32;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(hAngle) * hLen, cy + Math.sin(hAngle) * hLen);
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = hStroke;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Minute hand ~ 2 o'clock
+  const mAngle = 40 * Math.PI / 180;
+  const mLen = handBase * 0.4;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(mAngle) * mLen, cy + Math.sin(mAngle) * mLen);
+  ctx.lineWidth = mStroke;
+  ctx.stroke();
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5 * strokeScale, 0, Math.PI * 2);
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  // Arc
+  const arcR = s * 0.38;
+  const startRad = -90 * Math.PI / 180;
+  const endRad = 10 * Math.PI / 180;
+  const arrowStroke = 3 * strokeScale;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, arcR, startRad, endRad);
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = arrowStroke;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Arrowhead
+  const endX = cx + Math.cos(endRad) * arcR;
+  const endY = cy + Math.sin(endRad) * arcR;
+  // Tangent direction (clockwise along arc = perpendicular to radius outward)
+  const tangent = endRad + Math.PI / 2;
+
+  if (opts.arrowStyle === 'filled') {
+    // Filled triangle arrowhead
+    const aSize = 8 * strokeScale;
+    const wing = 0.45; // half-angle of the triangle wings
+    const p1x = endX - Math.cos(tangent - wing) * aSize;
+    const p1y = endY - Math.sin(tangent - wing) * aSize;
+    const p2x = endX - Math.cos(tangent + wing) * aSize;
+    const p2y = endY - Math.sin(tangent + wing) * aSize;
+    ctx.beginPath();
+    ctx.moveTo(endX, endY);
+    ctx.lineTo(p1x, p1y);
+    ctx.lineTo(p2x, p2y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fill();
+  } else if (opts.arrowStyle === 'chevron') {
+    // Open chevron arrowhead (like >)
+    const aSize = 9 * strokeScale;
+    const wing = 0.5;
+    const p1x = endX - Math.cos(tangent - wing) * aSize;
+    const p1y = endY - Math.sin(tangent - wing) * aSize;
+    const p2x = endX - Math.cos(tangent + wing) * aSize;
+    const p2y = endY - Math.sin(tangent + wing) * aSize;
+    ctx.beginPath();
+    ctx.moveTo(p1x, p1y);
+    ctx.lineTo(endX, endY);
+    ctx.lineTo(p2x, p2y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = arrowStroke * 0.9;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  } else if (opts.arrowStyle === 'wide-filled') {
+    // Wider filled triangle
+    const aSize = 10 * strokeScale;
+    const wing = 0.55;
+    const p1x = endX - Math.cos(tangent - wing) * aSize;
+    const p1y = endY - Math.sin(tangent - wing) * aSize;
+    const p2x = endX - Math.cos(tangent + wing) * aSize;
+    const p2y = endY - Math.sin(tangent + wing) * aSize;
+    ctx.beginPath();
+    ctx.moveTo(endX, endY);
+    ctx.lineTo(p1x, p1y);
+    ctx.lineTo(p2x, p2y);
+    ctx.closePath();
+    ctx.fillStyle = 'white';
+    ctx.fill();
+  }
+}
+
+const VARIANTS = [
+  { name: 'Filled Triangle', desc: 'Solid filled arrowhead. Clear direction even at 16px.', arrowStyle: 'filled' },
+  { name: 'Open Chevron', desc: 'Clean open > shape. Lighter feel, matches the line style.', arrowStyle: 'chevron' },
+  { name: 'Wide Filled', desc: 'Bigger solid triangle. Maximum clarity at small sizes.', arrowStyle: 'wide-filled' },
+];
+
+const grid = document.getElementById('grid');
+VARIANTS.forEach((v) => {
+  const div = document.createElement('div');
+  div.className = 'variant';
+  div.onclick = () => {
+    document.querySelectorAll('.variant').forEach(el => el.classList.remove('selected'));
+    div.classList.add('selected');
+  };
+
+  const row = document.createElement('div');
+  row.className = 'canvas-row';
+
+  [128, 48, 16].forEach(size => {
+    const wrap = document.createElement('div');
+    wrap.style.textAlign = 'center';
+    const c = document.createElement('canvas');
+    c.style.borderRadius = (size * 0.22) + 'px';
+    drawIcon(c, size, v);
+    wrap.appendChild(c);
+    const label = document.createElement('span');
+    label.style.cssText = 'display:block;color:#666;font-size:11px;margin-top:4px;';
+    label.textContent = size + 'px';
+    wrap.appendChild(label);
+    row.appendChild(wrap);
+  });
+
+  div.appendChild(row);
+  const h3 = document.createElement('h3');
+  h3.textContent = v.name;
+  div.appendChild(h3);
+  const p = document.createElement('p');
+  p.textContent = v.desc;
+  div.appendChild(p);
+  grid.appendChild(div);
+});
+</script>
+</body>
+</html>

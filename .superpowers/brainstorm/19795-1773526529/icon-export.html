@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>TimeShift Icon — Export</title>
+<style>
+  body { background: #111; color: #eee; font-family: system-ui; padding: 32px; }
+  h2 { color: #fff; margin-bottom: 8px; }
+  .subtitle { color: #999; margin-bottom: 32px; }
+  .export-grid { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end; margin-bottom: 40px; }
+  .export-item { text-align: center; }
+  .export-item canvas { display: block; border-radius: 4px; }
+  .export-item .label { color: #999; font-size: 12px; margin-top: 8px; }
+  .export-item button {
+    margin-top: 8px; padding: 6px 16px; background: #667eea; color: white;
+    border: none; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+  .export-item button:hover { background: #5a6fd6; }
+  .download-all {
+    padding: 12px 32px; background: #764ba2; color: white;
+    border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600;
+  }
+  .download-all:hover { background: #6a4093; }
+  .preview-section { margin-top: 40px; padding: 24px; background: #1a1a2e; border-radius: 16px; }
+  .preview-section h3 { color: #fff; margin: 0 0 16px; }
+  .toolbar-mock { display: flex; align-items: center; gap: 8px; background: #2d2d3d; padding: 8px 12px; border-radius: 8px; width: fit-content; }
+  .toolbar-dot { width: 20px; height: 20px; background: #444; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h2>TimeShift Icon — Final Export</h2>
+<p class="subtitle">Download PNGs at every size needed. Click individual buttons or download all at once.</p>
+
+<div class="export-grid" id="exports"></div>
+<button class="download-all" onclick="downloadAll()">Download All Sizes</button>
+
+<div class="preview-section">
+  <h3>Toolbar Preview</h3>
+  <div class="toolbar-mock">
+    <div class="toolbar-dot"></div>
+    <div class="toolbar-dot"></div>
+    <canvas id="toolbar-preview" style="border-radius:3px;"></canvas>
+    <div class="toolbar-dot"></div>
+    <div class="toolbar-dot"></div>
+  </div>
+</div>
+
+<script>
+function drawIcon(canvas, size) {
+  const ctx = canvas.getContext('2d');
+  // Use higher pixel ratio for crisp rendering
+  const dpr = Math.max(window.devicePixelRatio || 1, 2);
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  ctx.scale(dpr, dpr);
+
+  const s = size;
+  const cx = s / 2, cy = s / 2;
+
+  // Background rounded rect with gradient
+  const grad = ctx.createLinearGradient(0, 0, s, s);
+  grad.addColorStop(0, '#667eea');
+  grad.addColorStop(1, '#764ba2');
+  ctx.beginPath();
+  ctx.roundRect(0, 0, s, s, s * 0.22);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  const scale = s / 128;
+
+  // Clock hands (no circle — minimal style)
+  const handBase = s * 0.4;
+
+  // Hour hand ~ 10 o'clock
+  const hAngle = -50 * Math.PI / 180;
+  const hLen = handBase * 0.32;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(hAngle) * hLen, cy + Math.sin(hAngle) * hLen);
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 4.5 * scale;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Minute hand ~ 2 o'clock
+  const mAngle = 40 * Math.PI / 180;
+  const mLen = handBase * 0.4;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(mAngle) * mLen, cy + Math.sin(mAngle) * mLen);
+  ctx.lineWidth = 3.5 * scale;
+  ctx.stroke();
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5 * scale, 0, Math.PI * 2);
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  // Arc from 12 o'clock to ~3 o'clock
+  const arcR = s * 0.38;
+  const startRad = -90 * Math.PI / 180;
+  const endRad = 10 * Math.PI / 180;
+  const arrowStroke = 3 * scale;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, arcR, startRad, endRad);
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = arrowStroke;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Wide filled triangle arrowhead
+  const endX = cx + Math.cos(endRad) * arcR;
+  const endY = cy + Math.sin(endRad) * arcR;
+  const tangent = endRad + Math.PI / 2;
+  const aSize = 10 * scale;
+  const wing = 0.55;
+  const p1x = endX - Math.cos(tangent - wing) * aSize;
+  const p1y = endY - Math.sin(tangent - wing) * aSize;
+  const p2x = endX - Math.cos(tangent + wing) * aSize;
+  const p2y = endY - Math.sin(tangent + wing) * aSize;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(p1x, p1y);
+  ctx.lineTo(p2x, p2y);
+  ctx.closePath();
+  ctx.fillStyle = 'white';
+  ctx.fill();
+}
+
+// For export: draw at 1x DPR so the PNG is exactly the right pixel size
+function drawIconForExport(canvas, size) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = size;
+  canvas.height = size;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+
+  const s = size;
+  const cx = s / 2, cy = s / 2;
+
+  const grad = ctx.createLinearGradient(0, 0, s, s);
+  grad.addColorStop(0, '#667eea');
+  grad.addColorStop(1, '#764ba2');
+  ctx.beginPath();
+  ctx.roundRect(0, 0, s, s, s * 0.22);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  const scale = s / 128;
+
+  const handBase = s * 0.4;
+  const hAngle = -50 * Math.PI / 180;
+  const hLen = handBase * 0.32;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(hAngle) * hLen, cy + Math.sin(hAngle) * hLen);
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 4.5 * scale;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  const mAngle = 40 * Math.PI / 180;
+  const mLen = handBase * 0.4;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(mAngle) * mLen, cy + Math.sin(mAngle) * mLen);
+  ctx.lineWidth = 3.5 * scale;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5 * scale, 0, Math.PI * 2);
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  const arcR = s * 0.38;
+  const startRad = -90 * Math.PI / 180;
+  const endRad = 10 * Math.PI / 180;
+  const arrowStroke = 3 * scale;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, arcR, startRad, endRad);
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = arrowStroke;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  const endX = cx + Math.cos(endRad) * arcR;
+  const endY = cy + Math.sin(endRad) * arcR;
+  const tangent = endRad + Math.PI / 2;
+  const aSize = 10 * scale;
+  const wing = 0.55;
+  const p1x = endX - Math.cos(tangent - wing) * aSize;
+  const p1y = endY - Math.sin(tangent - wing) * aSize;
+  const p2x = endX - Math.cos(tangent + wing) * aSize;
+  const p2y = endY - Math.sin(tangent + wing) * aSize;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(p1x, p1y);
+  ctx.lineTo(p2x, p2y);
+  ctx.closePath();
+  ctx.fillStyle = 'white';
+  ctx.fill();
+}
+
+const SIZES = [
+  { size: 16, label: '16px (toolbar)', filename: 'icon16.png' },
+  { size: 48, label: '48px (extensions page)', filename: 'icon48.png' },
+  { size: 128, label: '128px (store/install)', filename: 'icon128.png' },
+  { size: 256, label: '256px (hi-res)', filename: 'icon256.png' },
+  { size: 512, label: '512px (store promo)', filename: 'icon512.png' },
+];
+
+const exportCanvases = {};
+const container = document.getElementById('exports');
+
+SIZES.forEach(({ size, label, filename }) => {
+  const div = document.createElement('div');
+  div.className = 'export-item';
+
+  // Display canvas (hi-dpi)
+  const displayCanvas = document.createElement('canvas');
+  drawIcon(displayCanvas, Math.min(size, 128)); // cap display size
+  div.appendChild(displayCanvas);
+
+  // Hidden export canvas (exact pixels)
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.style.display = 'none';
+  drawIconForExport(exportCanvas, size);
+  document.body.appendChild(exportCanvas);
+  exportCanvases[filename] = exportCanvas;
+
+  const labelEl = document.createElement('div');
+  labelEl.className = 'label';
+  labelEl.textContent = label;
+  div.appendChild(labelEl);
+
+  const btn = document.createElement('button');
+  btn.textContent = `Download ${filename}`;
+  btn.onclick = () => downloadPNG(exportCanvas, filename);
+  div.appendChild(btn);
+
+  container.appendChild(div);
+});
+
+// Toolbar preview
+drawIcon(document.getElementById('toolbar-preview'), 20);
+
+function downloadPNG(canvas, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+function downloadAll() {
+  Object.entries(exportCanvases).forEach(([filename, canvas]) => {
+    setTimeout(() => downloadPNG(canvas, filename), 100);
+  });
+}
+</script>
+</body>
+</html>
