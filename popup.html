@@ -136,6 +136,16 @@
             flex-shrink: 0;
             font-size: 16px;
             opacity: 0.5;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.2s;
+            user-select: none;
+        }
+        .tz-arrow:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+        .tz-arrow:active {
+            transform: scale(1.2) rotate(180deg);
         }
 
         /* ---- Result area ---- */
@@ -417,7 +427,7 @@
             <div class="tz-pill-line1" id="fromLine1">Auto-detect</div>
             <div class="tz-pill-line2" id="fromLine2">&nbsp;</div>
         </div>
-        <span class="tz-arrow" aria-hidden="true">&rarr;</span>
+        <span class="tz-arrow" id="swapArrow" role="button" tabindex="0" title="Swap timezones">&rarr;</span>
         <div class="tz-pill" id="toPill" role="button" tabindex="0" aria-label="Select target timezone">
             <div class="tz-pill-label">To</div>
             <div class="tz-pill-line1" id="toLine1">Auto-detect</div>

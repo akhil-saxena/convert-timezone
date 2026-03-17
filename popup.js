@@ -48,6 +48,7 @@ function initializeElements() {
     el.searchPanelClose = document.getElementById('searchPanelClose');
     el.searchPanelInput = document.getElementById('searchPanelInput');
     el.searchPanelResults = document.getElementById('searchPanelResults');
+    el.swapArrow = document.getElementById('swapArrow');
 }
 
 // ============================================================
@@ -684,6 +685,27 @@ function selectTimezone(type, timezoneName) {
 }
 
 // ============================================================
+// Swap timezones
+// ============================================================
+
+function swapTimezones() {
+    const tempFrom = selectedFromTimezone;
+    const tempTo = selectedToTimezone;
+
+    selectedFromTimezone = tempTo;
+    selectedToTimezone = tempFrom;
+
+    const fromTz = selectedFromTimezone ? timezones.find(tz => tz.name === selectedFromTimezone) : null;
+    const toTz = selectedToTimezone ? timezones.find(tz => tz.name === selectedToTimezone) : null;
+
+    updatePillDisplay('from', fromTz);
+    updatePillDisplay('to', toTz);
+
+    saveTimezonePreferences();
+    triggerAutoConvert();
+}
+
+// ============================================================
 // Auto-convert (debounced 300ms)
 // ============================================================
 
@@ -1038,6 +1060,15 @@ function setupEventListeners() {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             openSearchPanel('to');
+        }
+    });
+
+    // Swap arrow — reverse From and To
+    el.swapArrow.addEventListener('click', swapTimezones);
+    el.swapArrow.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            swapTimezones();
         }
     });
 
