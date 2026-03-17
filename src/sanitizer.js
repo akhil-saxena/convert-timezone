@@ -17,7 +17,8 @@ const NAMED_ENTITIES = {
 };
 
 // Leading junk: bullets, arrows, list markers
-const LEADING_JUNK = /^[\s\u2022\u25B8\u25B9\u25BA\u25BB\u2192\u27F6\u27A4\u279C\u2726\u2727\u2605\u2606\-\u2013\u2014\d]+\.\s*/;
+// The dot must be followed by whitespace (not a digit) to avoid stripping "15.30" German time notation
+const LEADING_JUNK = /^[\s\u2022\u25B8\u25B9\u25BA\u25BB\u2192\u27F6\u27A4\u279C\u2726\u2727\u2605\u2606\-\u2013\u2014\d]+\.(?=\s)[\s]*/;
 const BULLET_CHARS = /[\u2022\u25B8\u25B9\u25BA\u25BB\u2192\u27F6\u27A4\u279C\u2726\u2727\u2605\u2606]/g;
 
 function sanitize(rawText) {
