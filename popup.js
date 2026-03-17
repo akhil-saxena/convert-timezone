@@ -26,7 +26,11 @@ const elements = {
     toTimezoneOptions: null,
     nowBtn: null,
     copyBtn: null,
-    copyBtnText: null
+    copyBtnText: null,
+    confidenceBar: null,
+    confidenceText: null,
+    confidenceChangeBtn: null,
+    reportIssueLink: null
 };
 
 /**
@@ -34,9 +38,12 @@ const elements = {
  */
 document.addEventListener('DOMContentLoaded', async function() {
     initializeElements();
+    detectUserTimezone();
+
+    // Load recent timezones before initializing dropdowns
+    await loadRecentTimezones();
     initializeTimezones();
     setupEventListeners();
-    detectUserTimezone();
 
     // Load saved timezone preferences
     await loadTimezonePreferences();
@@ -68,6 +75,10 @@ function initializeElements() {
     elements.nowBtn = document.getElementById('nowBtn');
     elements.copyBtn = document.getElementById('copyBtn');
     elements.copyBtnText = document.getElementById('copyBtnText');
+    elements.confidenceBar = document.getElementById('confidenceBar');
+    elements.confidenceText = document.getElementById('confidenceText');
+    elements.confidenceChangeBtn = document.getElementById('confidenceChangeBtn');
+    elements.reportIssueLink = document.getElementById('reportIssueLink');
 }
 
 /**
@@ -87,6 +98,8 @@ function setupEventListeners() {
     // Clear result when input changes
     elements.dateTimeInput.addEventListener('input', function() {
         elements.result.classList.remove('show');
+        elements.confidenceBar.style.display = 'none';
+        elements.reportIssueLink.style.display = 'none';
     });
 
     // From timezone dropdown
@@ -132,6 +145,11 @@ function setupEventListeners() {
         handleConversion();
     });
 
+    // Confidence "Change" button — opens the From timezone dropdown
+    elements.confidenceChangeBtn.addEventListener('click', function() {
+        toggleDropdown('from');
+    });
+
     // Copy button — copy last conversion text to clipboard
     elements.copyBtn.addEventListener('click', function() {
         if (!lastConversionText) return;
@@ -145,84 +163,68 @@ function setupEventListeners() {
 }
 
 // ============================================================
-// Curated timezone list (IANA name + region + priority only)
-// Display names and offsets are computed dynamically via Intl
+// Country search map — lets users type country names to find zones
 // ============================================================
 
-const CURATED_TIMEZONES = [
-    // UTC and GMT
-    { name: 'UTC', region: 'UTC', priority: 1 },
-
-    // Americas (Eastern to Pacific)
-    { name: 'America/New_York', region: 'Americas', priority: 2 },
-    { name: 'America/Toronto', region: 'Americas', priority: 3 },
-    { name: 'America/Chicago', region: 'Americas', priority: 3 },
-    { name: 'America/Denver', region: 'Americas', priority: 3 },
-    { name: 'America/Los_Angeles', region: 'Americas', priority: 2 },
-    { name: 'America/Phoenix', region: 'Americas', priority: 3 },
-    { name: 'America/Anchorage', region: 'Americas', priority: 3 },
-    { name: 'Pacific/Honolulu', region: 'Americas', priority: 3 },
-
-    // Canada
-    { name: 'America/Vancouver', region: 'Americas', priority: 3 },
-    { name: 'America/Edmonton', region: 'Americas', priority: 3 },
-    { name: 'America/Winnipeg', region: 'Americas', priority: 3 },
-    { name: 'America/Halifax', region: 'Americas', priority: 3 },
-
-    // South America
-    { name: 'America/Sao_Paulo', region: 'Americas', priority: 3 },
-    { name: 'America/Argentina/Buenos_Aires', region: 'Americas', priority: 3 },
-    { name: 'America/Mexico_City', region: 'Americas', priority: 3 },
-    { name: 'America/Lima', region: 'Americas', priority: 3 },
-
-    // Europe
-    { name: 'Europe/London', region: 'Europe', priority: 2 },
-    { name: 'Europe/Paris', region: 'Europe', priority: 2 },
-    { name: 'Europe/Berlin', region: 'Europe', priority: 3 },
-    { name: 'Europe/Rome', region: 'Europe', priority: 3 },
-    { name: 'Europe/Madrid', region: 'Europe', priority: 3 },
-    { name: 'Europe/Amsterdam', region: 'Europe', priority: 3 },
-    { name: 'Europe/Zurich', region: 'Europe', priority: 3 },
-    { name: 'Europe/Vienna', region: 'Europe', priority: 3 },
-    { name: 'Europe/Stockholm', region: 'Europe', priority: 3 },
-    { name: 'Europe/Helsinki', region: 'Europe', priority: 3 },
-    { name: 'Europe/Athens', region: 'Europe', priority: 3 },
-    { name: 'Europe/Moscow', region: 'Europe', priority: 3 },
-    { name: 'Europe/Istanbul', region: 'Europe', priority: 3 },
-
-    // Asia-Pacific
-    { name: 'Asia/Tokyo', region: 'Asia-Pacific', priority: 2 },
-    { name: 'Asia/Shanghai', region: 'Asia-Pacific', priority: 2 },
-    { name: 'Asia/Hong_Kong', region: 'Asia-Pacific', priority: 3 },
-    { name: 'Asia/Singapore', region: 'Asia-Pacific', priority: 3 },
-    { name: 'Asia/Seoul', region: 'Asia-Pacific', priority: 3 },
-    { name: 'Asia/Kolkata', region: 'Asia-Pacific', priority: 2 },
-    { name: 'Asia/Dubai', region: 'Asia-Pacific', priority: 3 },
-    { name: 'Asia/Bangkok', region: 'Asia-Pacific', priority: 3 },
-    { name: 'Asia/Manila', region: 'Asia-Pacific', priority: 3 },
-    { name: 'Asia/Jakarta', region: 'Asia-Pacific', priority: 3 },
-    { name: 'Asia/Taipei', region: 'Asia-Pacific', priority: 3 },
-
-    // Australia & Oceania
-    { name: 'Australia/Sydney', region: 'Australia/Oceania', priority: 2 },
-    { name: 'Australia/Melbourne', region: 'Australia/Oceania', priority: 3 },
-    { name: 'Australia/Brisbane', region: 'Australia/Oceania', priority: 3 },
-    { name: 'Australia/Perth', region: 'Australia/Oceania', priority: 3 },
-    { name: 'Australia/Adelaide', region: 'Australia/Oceania', priority: 3 },
-    { name: 'Pacific/Auckland', region: 'Australia/Oceania', priority: 3 },
-
-    // Africa
-    { name: 'Africa/Cairo', region: 'Africa', priority: 3 },
-    { name: 'Africa/Johannesburg', region: 'Africa', priority: 3 },
-    { name: 'Africa/Lagos', region: 'Africa', priority: 3 },
-    { name: 'Africa/Nairobi', region: 'Africa', priority: 3 },
-    { name: 'Africa/Casablanca', region: 'Africa', priority: 3 },
-
-    // Middle East
-    { name: 'Asia/Jerusalem', region: 'Middle East', priority: 3 },
-    { name: 'Asia/Riyadh', region: 'Middle East', priority: 3 },
-    { name: 'Asia/Tehran', region: 'Middle East', priority: 3 },
-];
+const COUNTRY_SEARCH_MAP = {
+    'usa': ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu'],
+    'united states': ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu'],
+    'us': ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu'],
+    'india': ['Asia/Kolkata'],
+    'japan': ['Asia/Tokyo'],
+    'china': ['Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Urumqi'],
+    'uk': ['Europe/London'],
+    'united kingdom': ['Europe/London'],
+    'britain': ['Europe/London'],
+    'england': ['Europe/London'],
+    'germany': ['Europe/Berlin'],
+    'france': ['Europe/Paris'],
+    'australia': ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Perth', 'Australia/Adelaide', 'Australia/Darwin', 'Australia/Hobart'],
+    'canada': ['America/Toronto', 'America/Vancouver', 'America/Edmonton', 'America/Winnipeg', 'America/Halifax', 'America/St_Johns'],
+    'brazil': ['America/Sao_Paulo', 'America/Manaus', 'America/Bahia', 'America/Fortaleza'],
+    'mexico': ['America/Mexico_City', 'America/Cancun', 'America/Tijuana'],
+    'russia': ['Europe/Moscow', 'Asia/Yekaterinburg', 'Asia/Novosibirsk', 'Asia/Vladivostok'],
+    'south korea': ['Asia/Seoul'],
+    'korea': ['Asia/Seoul'],
+    'singapore': ['Asia/Singapore'],
+    'uae': ['Asia/Dubai'],
+    'dubai': ['Asia/Dubai'],
+    'saudi arabia': ['Asia/Riyadh'],
+    'saudi': ['Asia/Riyadh'],
+    'israel': ['Asia/Jerusalem'],
+    'turkey': ['Europe/Istanbul'],
+    'italy': ['Europe/Rome'],
+    'spain': ['Europe/Madrid'],
+    'netherlands': ['Europe/Amsterdam'],
+    'switzerland': ['Europe/Zurich'],
+    'sweden': ['Europe/Stockholm'],
+    'norway': ['Europe/Oslo'],
+    'finland': ['Europe/Helsinki'],
+    'greece': ['Europe/Athens'],
+    'poland': ['Europe/Warsaw'],
+    'portugal': ['Europe/Lisbon'],
+    'ireland': ['Europe/Dublin'],
+    'egypt': ['Africa/Cairo'],
+    'south africa': ['Africa/Johannesburg'],
+    'nigeria': ['Africa/Lagos'],
+    'kenya': ['Africa/Nairobi'],
+    'morocco': ['Africa/Casablanca'],
+    'thailand': ['Asia/Bangkok'],
+    'indonesia': ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'],
+    'philippines': ['Asia/Manila'],
+    'taiwan': ['Asia/Taipei'],
+    'hong kong': ['Asia/Hong_Kong'],
+    'malaysia': ['Asia/Kuala_Lumpur'],
+    'vietnam': ['Asia/Ho_Chi_Minh'],
+    'pakistan': ['Asia/Karachi'],
+    'bangladesh': ['Asia/Dhaka'],
+    'iran': ['Asia/Tehran'],
+    'new zealand': ['Pacific/Auckland'],
+    'argentina': ['America/Argentina/Buenos_Aires'],
+    'chile': ['America/Santiago'],
+    'colombia': ['America/Bogota'],
+    'peru': ['America/Lima'],
+};
 
 // ============================================================
 // Intl-based timezone utilities
@@ -318,39 +320,97 @@ function detectUserTimezone() {
 }
 
 // ============================================================
-// Timezone initialization
+// Timezone initialization — full IANA from Intl.supportedValuesOf
 // ============================================================
 
 /**
- * Initialize timezone data from curated list with dynamic Intl-computed display names
+ * Map IANA prefix to continent/region group name
  */
-function initializeTimezones() {
-    timezones = CURATED_TIMEZONES.map(tz => {
-        try {
-            const { displayName, longName } = buildTimezoneInfo(tz.name);
-            const utcOffset = getTimezoneOffsetMinutes(tz.name);
-            const parts = tz.name.split('/');
-            const city = parts[parts.length - 1].replace(/_/g, ' ');
+function getRegionGroup(ianaName) {
+    if (ianaName === 'UTC') return 'UTC';
+    const prefix = ianaName.split('/')[0];
+    switch (prefix) {
+        case 'America': return 'Americas';
+        case 'Europe': return 'Europe';
+        case 'Asia': return 'Asia';
+        case 'Africa': return 'Africa';
+        case 'Australia': return 'Australia/Oceania';
+        case 'Pacific': return 'Pacific';
+        case 'Indian': return 'Indian Ocean';
+        case 'Atlantic': return 'Atlantic';
+        case 'Arctic': return 'Arctic';
+        case 'Antarctica': return 'Antarctica';
+        default: return 'Other';
+    }
+}
 
-            return {
-                name: tz.name,
+/**
+ * Ordered list of region groups for display
+ */
+const REGION_ORDER = [
+    'UTC', 'Americas', 'Europe', 'Asia', 'Africa',
+    'Australia/Oceania', 'Pacific', 'Indian Ocean', 'Atlantic', 'Arctic', 'Antarctica', 'Other'
+];
+
+/**
+ * Generate full timezone list from all IANA zones via Intl.supportedValuesOf
+ */
+function generateAllTimezones() {
+    let allZones;
+    try {
+        allZones = Intl.supportedValuesOf('timeZone');
+    } catch {
+        // Fallback for older environments — return a minimal set
+        allZones = [
+            'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
+            'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+            'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Asia/Dubai',
+            'Australia/Sydney', 'Pacific/Auckland', 'Africa/Cairo', 'Africa/Lagos'
+        ];
+    }
+
+    // Always ensure UTC is included
+    if (!allZones.includes('UTC')) {
+        allZones.unshift('UTC');
+    }
+
+    const result = [];
+    for (const zoneName of allZones) {
+        try {
+            const { displayName, longName } = buildTimezoneInfo(zoneName);
+            const utcOffset = getTimezoneOffsetMinutes(zoneName);
+            const parts = zoneName.split('/');
+            const city = parts[parts.length - 1].replace(/_/g, ' ');
+            const region = getRegionGroup(zoneName);
+
+            result.push({
+                name: zoneName,
                 city: city,
-                region: tz.region,
+                region: region,
                 displayName: displayName,
                 longName: longName,
-                searchText: `${tz.name} ${city} ${tz.region} ${displayName} ${longName}`.toLowerCase(),
-                utcOffset: utcOffset,
-                priority: tz.priority,
-                sortKey: `${tz.priority}_${utcOffset.toString().padStart(5, '0')}_${city}`
-            };
+                searchText: `${zoneName} ${city} ${region} ${displayName} ${longName}`.toLowerCase(),
+                utcOffset: utcOffset
+            });
         } catch {
-            return null;
+            // Skip zones that fail to resolve
         }
-    }).filter(tz => tz !== null);
+    }
 
-    // Sort by priority, then by UTC offset, then by city name
+    return result;
+}
+
+/**
+ * Initialize timezone data from all IANA zones with dynamic Intl-computed display names
+ */
+function initializeTimezones() {
+    timezones = generateAllTimezones();
+
+    // Sort within each region by UTC offset, then city name
     timezones.sort((a, b) => {
-        if (a.priority !== b.priority) return a.priority - b.priority;
+        const aRegionIdx = REGION_ORDER.indexOf(a.region);
+        const bRegionIdx = REGION_ORDER.indexOf(b.region);
+        if (aRegionIdx !== bRegionIdx) return aRegionIdx - bRegionIdx;
         if (a.utcOffset !== b.utcOffset) return a.utcOffset - b.utcOffset;
         return a.city.localeCompare(b.city);
     });
@@ -362,11 +422,72 @@ function initializeTimezones() {
 // Dropdown population, filtering, selection (kept as-is)
 // ============================================================
 
+// ============================================================
+// Recent timezones — stored in chrome.storage.local
+// ============================================================
+
+let recentTimezones = [];
+
 /**
- * Populate timezone dropdown options
+ * Load recent timezones from storage
+ */
+async function loadRecentTimezones() {
+    try {
+        const result = await chrome.storage.local.get('recentTimezones');
+        recentTimezones = result.recentTimezones || [];
+    } catch {
+        recentTimezones = [];
+    }
+}
+
+/**
+ * Add a timezone to the recents list (max 5, deduped)
+ */
+async function addToRecentTimezones(timezoneName) {
+    if (!timezoneName || timezoneName === 'UTC') return;
+    recentTimezones = recentTimezones.filter(tz => tz !== timezoneName);
+    recentTimezones.unshift(timezoneName);
+    if (recentTimezones.length > 5) recentTimezones = recentTimezones.slice(0, 5);
+    try {
+        await chrome.storage.local.set({ recentTimezones });
+    } catch {
+        // Silent fail
+    }
+}
+
+// ============================================================
+// Dropdown population with continent grouping and recents
+// ============================================================
+
+/**
+ * Create a timezone option element
+ */
+function createTimezoneOption(timezone, type) {
+    const option = document.createElement('div');
+    option.className = 'dropdown-option';
+    option.innerHTML = `${escapeHtml(timezone.displayName)}${timezone.longName ? `<span class="tz-long-name">${escapeHtml(timezone.longName)}</span>` : ''}`;
+    option.dataset.timezone = timezone.name;
+    option.dataset.searchtext = timezone.searchText;
+    option.addEventListener('click', function() {
+        selectTimezone(type, timezone.name, timezone.displayName);
+    });
+    return option;
+}
+
+/**
+ * Create a group header element
+ */
+function createGroupHeader(label) {
+    const header = document.createElement('div');
+    header.className = 'dropdown-group-header';
+    header.textContent = label;
+    return header;
+}
+
+/**
+ * Populate timezone dropdown options with continent groups and recents
  */
 function populateTimezoneOptions() {
-    // Clear existing options
     elements.fromTimezoneOptions.innerHTML = '';
     elements.toTimezoneOptions.innerHTML = '';
 
@@ -379,52 +500,105 @@ function populateTimezoneOptions() {
     });
     elements.toTimezoneOptions.appendChild(autoDetectOption);
 
-    // Add timezone options with two-line display
-    timezones.forEach((timezone) => {
-        // From timezone option
-        const fromOption = document.createElement('div');
-        fromOption.className = 'dropdown-option';
-        fromOption.innerHTML = `${escapeHtml(timezone.displayName)}${timezone.longName ? `<span class="tz-long-name">${escapeHtml(timezone.longName)}</span>` : ''}`;
-        fromOption.dataset.timezone = timezone.name;
-        fromOption.addEventListener('click', function() {
-            selectTimezone('from', timezone.name, timezone.displayName);
-        });
-        elements.fromTimezoneOptions.appendChild(fromOption);
+    // Add recent timezones section if any exist
+    if (recentTimezones.length > 0) {
+        const recentZones = recentTimezones
+            .map(name => timezones.find(tz => tz.name === name))
+            .filter(Boolean);
 
-        // To timezone option
-        const toOption = document.createElement('div');
-        toOption.className = 'dropdown-option';
-        toOption.innerHTML = `${escapeHtml(timezone.displayName)}${timezone.longName ? `<span class="tz-long-name">${escapeHtml(timezone.longName)}</span>` : ''}`;
-        toOption.dataset.timezone = timezone.name;
-        toOption.addEventListener('click', function() {
-            selectTimezone('to', timezone.name, timezone.displayName);
-        });
-        elements.toTimezoneOptions.appendChild(toOption);
+        if (recentZones.length > 0) {
+            const fromRecentHeader = createGroupHeader('\u2605 Recent');
+            const toRecentHeader = createGroupHeader('\u2605 Recent');
+            elements.fromTimezoneOptions.appendChild(fromRecentHeader);
+            elements.toTimezoneOptions.appendChild(toRecentHeader);
+
+            recentZones.forEach(tz => {
+                elements.fromTimezoneOptions.appendChild(createTimezoneOption(tz, 'from'));
+                elements.toTimezoneOptions.appendChild(createTimezoneOption(tz, 'to'));
+            });
+        }
+    }
+
+    // Group timezones by region and add with headers
+    let currentRegion = null;
+    timezones.forEach(timezone => {
+        if (timezone.region !== currentRegion) {
+            currentRegion = timezone.region;
+            const fromHeader = createGroupHeader(currentRegion);
+            const toHeader = createGroupHeader(currentRegion);
+            elements.fromTimezoneOptions.appendChild(fromHeader);
+            elements.toTimezoneOptions.appendChild(toHeader);
+        }
+
+        elements.fromTimezoneOptions.appendChild(createTimezoneOption(timezone, 'from'));
+        elements.toTimezoneOptions.appendChild(createTimezoneOption(timezone, 'to'));
     });
 }
 
 /**
- * Filter timezones based on search query
+ * Filter timezones based on search query, including country name matching
  */
 function filterTimezones(type, query) {
     const optionsContainer = type === 'from' ? elements.fromTimezoneOptions : elements.toTimezoneOptions;
-    const options = optionsContainer.querySelectorAll('.dropdown-option');
+    const allChildren = optionsContainer.children;
 
     query = query.toLowerCase().trim();
 
-    options.forEach(option => {
-        if (option.classList.contains('special')) {
-            // Always show auto-detect option
-            option.style.display = 'block';
-            return;
+    // Build a set of timezone names that match via country search
+    const countryMatchZones = new Set();
+    if (query) {
+        for (const [country, zones] of Object.entries(COUNTRY_SEARCH_MAP)) {
+            if (country.includes(query)) {
+                zones.forEach(z => countryMatchZones.add(z.toLowerCase()));
+            }
+        }
+    }
+
+    let anyVisibleInGroup = false;
+    let lastHeader = null;
+
+    for (let i = 0; i < allChildren.length; i++) {
+        const child = allChildren[i];
+
+        if (child.classList.contains('dropdown-group-header')) {
+            // If we had a previous header with no visible options, hide it
+            if (lastHeader && !anyVisibleInGroup) {
+                lastHeader.style.display = 'none';
+            }
+            lastHeader = child;
+            anyVisibleInGroup = false;
+            // Tentatively show the header; we'll hide it if no children match
+            child.style.display = query === '' ? '' : 'none';
+            continue;
         }
 
-        const text = option.textContent.toLowerCase();
-        const timezone = option.dataset.timezone ? option.dataset.timezone.toLowerCase() : '';
-        const isMatch = query === '' || text.includes(query) || timezone.includes(query);
+        if (child.classList.contains('special')) {
+            child.style.display = '';
+            continue;
+        }
 
-        option.style.display = isMatch ? 'block' : 'none';
-    });
+        if (query === '') {
+            child.style.display = '';
+            anyVisibleInGroup = true;
+            if (lastHeader) lastHeader.style.display = '';
+            continue;
+        }
+
+        const searchText = child.dataset.searchtext || child.textContent.toLowerCase();
+        const tzName = (child.dataset.timezone || '').toLowerCase();
+        const isMatch = searchText.includes(query) || tzName.includes(query) || countryMatchZones.has(tzName);
+
+        child.style.display = isMatch ? '' : 'none';
+        if (isMatch) {
+            anyVisibleInGroup = true;
+            if (lastHeader) lastHeader.style.display = '';
+        }
+    }
+
+    // Handle the last group header
+    if (lastHeader && !anyVisibleInGroup && query !== '') {
+        lastHeader.style.display = 'none';
+    }
 }
 
 /**
@@ -531,6 +705,13 @@ function selectTimezone(type, timezoneName, displayName) {
 
     // Save timezone preferences whenever a selection is made
     saveTimezonePreferences();
+
+    // Add to recents and re-render dropdowns to show updated recents
+    if (timezoneName) {
+        addToRecentTimezones(timezoneName).then(() => {
+            populateTimezoneOptions();
+        });
+    }
 }
 
 // ============================================================
@@ -608,12 +789,57 @@ function escapeHtml(text) {
 // ============================================================
 
 /**
+ * Build a mailto: URL pre-filled with bug report details
+ */
+function buildReportMailto(inputText, parseResult, convertedOutput) {
+    const to = 'saxena.akhil42@gmail.com';
+    const subject = encodeURIComponent('TimeShift Bug Report \u2014 Incorrect Conversion');
+
+    const body = encodeURIComponent(
+`TimeShift Bug Report
+=====================
+
+Input Text: "${inputText}"
+
+Parse Result:
+- Source Timezone: ${parseResult.sourceTimezone}
+- Confidence: ${parseResult.confidence}
+- Confidence Detail: ${parseResult.confidenceDetail || 'N/A'}
+- Detected Locale: ${parseResult.detectedLocale || 'en'}
+- City Match: ${parseResult.cityMatch || 'None'}
+- Explicit Offset: ${parseResult.explicitOffset ?? 'None'}
+- Is Range: ${parseResult.isRange}
+- Has Explicit Date: ${parseResult.hasExplicitDate}
+- Wall Clock: ${JSON.stringify(parseResult.wallClock)}
+- UTC Date: ${parseResult.utcDate?.toISOString() || 'N/A'}
+
+Converted Output: "${convertedOutput}"
+
+Expected Output:
+[Please describe what the correct conversion should be]
+
+Additional Context:
+[Any other details about where you found this time text]
+
+---
+TimeShift v2.2.0 | ${new Date().toISOString()}
+User Timezone: ${userTimezone}
+User Agent: ${navigator.userAgent}
+`
+    );
+
+    return `mailto:${to}?subject=${subject}&body=${body}`;
+}
+
+/**
  * Handle time conversion
  */
 function handleConversion() {
     const inputText = elements.dateTimeInput.value.trim();
 
     if (!inputText) {
+        elements.confidenceBar.style.display = 'none';
+        elements.reportIssueLink.style.display = 'none';
         showResult('Please enter a date/time to convert.', 'error');
         return;
     }
@@ -624,6 +850,8 @@ function handleConversion() {
     });
 
     if (!parseResult) {
+        elements.confidenceBar.style.display = 'none';
+        elements.reportIssueLink.style.display = 'none';
         showResult(`
             <div style="color: #f59e0b; font-weight: 600; margin-bottom: 8px;">! No Time Information Detected</div>
             <div style="font-size: 13px; line-height: 1.4;">
@@ -646,6 +874,17 @@ function handleConversion() {
         // If confidence is low but user manually selected a From timezone, upgrade
         if (confidence === 'low' && selectedFromTimezone) {
             confidence = 'medium';
+        }
+
+        // Show or hide confidence indicator
+        if (confidence === 'high') {
+            elements.confidenceBar.style.display = 'none';
+        } else {
+            const detail = parseResult.confidenceDetail || (confidence === 'medium'
+                ? 'Timezone inferred — verify the source timezone'
+                : 'Low confidence — please select the source timezone');
+            elements.confidenceText.textContent = detail;
+            elements.confidenceBar.style.display = 'flex';
         }
 
         // If confidence is high, auto-update From dropdown with detected timezone
@@ -808,7 +1047,13 @@ function handleConversion() {
             showResult(resultHtml, 'success');
         }
 
+        // Wire up "Report Issue" mailto link after successful conversion
+        elements.reportIssueLink.href = buildReportMailto(inputText, parseResult, lastConversionText);
+        elements.reportIssueLink.style.display = 'inline';
+
     } catch (error) {
+        elements.confidenceBar.style.display = 'none';
+        elements.reportIssueLink.style.display = 'none';
         showResult(`
             <div style="color: #f87171; font-weight: 600; margin-bottom: 8px;">Error</div>
             <div style="font-size: 12px; opacity: 0.8;">${escapeHtml(error.message)}</div>
