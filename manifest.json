@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TimeShift: Global Timezone Converter",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Convert dates/times between any timezones with intelligent detection and context menu integration",
   "permissions": [
     "contextMenus",
