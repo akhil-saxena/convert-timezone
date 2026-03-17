@@ -912,15 +912,28 @@ function handleConversion() {
             confidence = 'medium';
         }
 
-        // Show or hide confidence
+        // Show or hide confidence + contextual hint
         if (confidence === 'high') {
-            el.confidenceText.classList.remove('show');
-        } else {
+            // When timezone is detected from input, hint that swap won't work with embedded tz
+            el.confidenceText.textContent = 'Tip: Enter time without timezone (e.g., "3:00 PM") to use the From picker';
+            el.confidenceText.classList.add('show');
+            el.confidenceText.classList.add('hint');
+        } else if (confidence === 'low' && !selectedFromTimezone) {
+            // Auto-detect, no user selection
+            const localCity = userTimezone.split('/').pop().replace(/_/g, ' ');
+            el.confidenceText.textContent = `Auto-detected: ${localCity} \u2014 select From timezone for other zones`;
+            el.confidenceText.classList.add('show');
+            el.confidenceText.classList.remove('hint');
+        } else if (confidence === 'low' || confidence === 'medium') {
             const detail = parseResult.confidenceDetail || (confidence === 'medium'
                 ? 'Timezone inferred \u2014 verify the source timezone'
-                : 'Low confidence \u2014 please select the source timezone');
+                : 'No timezone in input \u2014 using your selected From timezone');
             el.confidenceText.textContent = detail;
             el.confidenceText.classList.add('show');
+            el.confidenceText.classList.remove('hint');
+        } else {
+            el.confidenceText.classList.remove('show');
+            el.confidenceText.classList.remove('hint');
         }
 
         // High confidence — auto-update From pill with detected timezone

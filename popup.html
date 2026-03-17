@@ -23,24 +23,24 @@
         }
 
         /* ---- Title ---- */
-        .title-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-        .title-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-        }
         .title {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
-            margin: 0;
+            margin: 0 0 16px 0;
+        }
+        .title-time {
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+        .title-shift {
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         /* ---- Input row ---- */
@@ -274,6 +274,10 @@
         .confidence-text.show {
             display: block;
         }
+        .confidence-text.hint {
+            opacity: 0.35;
+            font-style: italic;
+        }
 
         /* ---- Error/info messages inside result ---- */
         .result-error-title {
@@ -451,10 +455,7 @@
     </style>
 </head>
 <body>
-    <div class="title-row">
-        <img src="icons/icon48.png" alt="" class="title-icon">
-        <h1 class="title">TimeShift</h1>
-    </div>
+    <h1 class="title"><span class="title-time">Time</span><span class="title-shift">Shift</span></h1>
 
     <div class="input-row">
         <input type="text" id="dateTimeInput" placeholder="Enter date/time..." autocomplete="off">
@@ -467,7 +468,13 @@
             <div class="tz-pill-line1" id="fromLine1">Auto-detect</div>
             <div class="tz-pill-line2" id="fromLine2">&nbsp;</div>
         </div>
-        <span class="tz-arrow" id="swapArrow" role="button" tabindex="0" title="Swap timezones">&rarr;</span>
+        <span class="tz-arrow" id="swapArrow" role="button" tabindex="0" title="Swap timezones">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="7 16 3 12 7 8"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <polyline points="17 8 21 12 17 16"/>
+            </svg>
+        </span>
         <div class="tz-pill" id="toPill" role="button" tabindex="0" aria-label="Select target timezone">
             <div class="tz-pill-label">To</div>
             <div class="tz-pill-line1" id="toLine1">Auto-detect</div>
