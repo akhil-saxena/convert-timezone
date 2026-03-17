@@ -355,6 +355,66 @@ const REGION_ORDER = [
 /**
  * Generate full timezone list from all IANA zones via Intl.supportedValuesOf
  */
+/**
+ * Common city aliases and search terms for IANA zones.
+ * Helps users find zones by familiar city names that aren't in the IANA identifier.
+ */
+const CITY_ALIASES = {
+    'Asia/Kolkata': 'mumbai bombay delhi bangalore chennai hyderabad india calcutta',
+    'Asia/Shanghai': 'beijing china shenzhen guangzhou',
+    'America/New_York': 'nyc manhattan usa east coast',
+    'America/Los_Angeles': 'la san francisco usa west coast hollywood',
+    'America/Chicago': 'houston dallas usa midwest',
+    'Europe/London': 'uk england britain',
+    'Europe/Istanbul': 'turkey constantinople',
+    'America/Sao_Paulo': 'brazil rio',
+    'America/Argentina/Buenos_Aires': 'argentina',
+    'Asia/Tokyo': 'japan osaka',
+    'Asia/Seoul': 'korea busan',
+    'Asia/Dubai': 'uae abu dhabi',
+    'Asia/Riyadh': 'saudi arabia jeddah mecca',
+    'Asia/Jerusalem': 'israel tel aviv',
+    'Asia/Karachi': 'pakistan lahore islamabad',
+    'Asia/Dhaka': 'bangladesh',
+    'Asia/Kathmandu': 'nepal',
+    'Europe/Moscow': 'russia',
+    'Europe/Paris': 'france',
+    'Europe/Berlin': 'germany',
+    'Europe/Rome': 'italy milan',
+    'Europe/Madrid': 'spain barcelona',
+    'Europe/Amsterdam': 'netherlands holland',
+    'Africa/Cairo': 'egypt',
+    'Africa/Johannesburg': 'south africa cape town',
+    'Africa/Lagos': 'nigeria',
+    'Africa/Nairobi': 'kenya',
+    'Africa/Casablanca': 'morocco',
+    'Australia/Sydney': 'australia',
+    'Pacific/Auckland': 'new zealand wellington',
+    'America/Toronto': 'canada ontario',
+    'America/Vancouver': 'canada bc',
+    'Asia/Singapore': 'singapore',
+    'Asia/Hong_Kong': 'hong kong hk',
+    'Asia/Taipei': 'taiwan',
+    'Asia/Bangkok': 'thailand',
+    'Asia/Jakarta': 'indonesia',
+    'Asia/Manila': 'philippines',
+    'Asia/Tehran': 'iran persia',
+    'Europe/Athens': 'greece',
+    'Europe/Helsinki': 'finland',
+    'Europe/Stockholm': 'sweden',
+    'Europe/Oslo': 'norway',
+    'Europe/Copenhagen': 'denmark',
+    'Europe/Warsaw': 'poland',
+    'Europe/Zurich': 'switzerland',
+    'Europe/Vienna': 'austria',
+    'Europe/Dublin': 'ireland',
+    'Europe/Lisbon': 'portugal',
+};
+
+function getCityAliases(zoneName) {
+    return CITY_ALIASES[zoneName] || '';
+}
+
 function generateAllTimezones() {
     let allZones;
     try {
@@ -389,7 +449,7 @@ function generateAllTimezones() {
                 region: region,
                 displayName: displayName,
                 longName: longName,
-                searchText: `${zoneName} ${city} ${region} ${displayName} ${longName}`.toLowerCase(),
+                searchText: `${zoneName} ${city} ${region} ${displayName} ${longName} ${getCityAliases(zoneName)}`.toLowerCase(),
                 utcOffset: utcOffset
             });
         } catch {
@@ -1047,8 +1107,13 @@ function handleConversion() {
             showResult(resultHtml, 'success');
         }
 
-        // Wire up "Report Issue" mailto link after successful conversion
-        elements.reportIssueLink.href = buildReportMailto(inputText, parseResult, lastConversionText);
+        // Wire up "Report Issue" — use chrome.tabs.create because mailto: doesn't work in popup
+        const mailtoUrl = buildReportMailto(inputText, parseResult, lastConversionText);
+        elements.reportIssueLink.href = mailtoUrl;
+        elements.reportIssueLink.onclick = function(e) {
+            e.preventDefault();
+            chrome.tabs.create({ url: mailtoUrl });
+        };
         elements.reportIssueLink.style.display = 'inline';
 
     } catch (error) {
