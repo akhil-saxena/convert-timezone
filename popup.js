@@ -770,6 +770,42 @@ function selectTimezone(type, timezoneName) {
 // Swap timezones
 // ============================================================
 
+/**
+ * Strip timezone info from input text so the From picker controls the source timezone.
+ * Removes: abbreviations (EST, PST), offsets (GMT-5, UTC+5:30), verbose names, city refs.
+ */
+function stripTimezoneFromInput(text) {
+    let t = text;
+    // Remove parenthetical offsets: (GMT-5:00), (UTC+01:00)
+    t = t.replace(/\((?:GMT|UTC)\s*[+-]\s*\d{1,2}:?\d{0,2}\)/gi, '');
+    // Remove bare offsets: GMT-5, UTC+5:30
+    t = t.replace(/\b(?:GMT|UTC)\s*[+-]\s*\d{1,2}:?\d{0,2}\b/gi, '');
+    // Remove bracket context: [US & Canada]
+    t = t.replace(/\[[^\]]+\]/g, '');
+    // Remove common timezone abbreviations (word boundary)
+    const abbrPattern = /\b(NZDT|NZST|AEDT|AEST|ACDT|ACST|AWST|AKDT|AKST|CEST|EEST|IRST|SAST|EST|EDT|CST|CDT|MST|MDT|PST|PDT|HST|BST|IST|CET|EET|WET|JST|KST|SGT|HKT|ICT|WIB|PHT|MSK|TRT|GST|AST|WAT|EAT|BRT|ART|PET|ET|CT|MT|PT)\b/gi;
+    t = t.replace(abbrPattern, '');
+    // Remove verbose timezone names
+    const verbosePatterns = [
+        'Pacific Standard Time', 'Pacific Daylight Time', 'Pacific Time',
+        'Eastern Standard Time', 'Eastern Daylight Time', 'Eastern Time',
+        'Central Standard Time', 'Central Daylight Time', 'Central Time',
+        'Mountain Standard Time', 'Mountain Daylight Time', 'Mountain Time',
+        'India Standard Time', 'Japan Standard Time', 'China Standard Time',
+        'British Summer Time', 'Greenwich Mean Time', 'Coordinated Universal Time',
+        'Central European Time', 'Central European Summer Time',
+    ];
+    for (const name of verbosePatterns) {
+        t = t.replace(new RegExp('\\b' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), '');
+    }
+    // Remove "in {city}" and "{city} time" patterns for well-known cities
+    t = t.replace(/\bin\s+(london|tokyo|paris|berlin|mumbai|delhi|sydney|dubai|moscow)\b/gi, '');
+    t = t.replace(/\b(london|tokyo|paris|berlin|mumbai|delhi|sydney|dubai|moscow)\s+time\b/gi, '');
+    // Clean up whitespace
+    t = t.replace(/\s+/g, ' ').trim();
+    return t;
+}
+
 function swapTimezones() {
     // Resolve actual timezone values (null means user's local timezone)
     const actualFrom = selectedFromTimezone || userTimezone;
@@ -783,6 +819,15 @@ function swapTimezones() {
 
     updatePillDisplay('from', fromTz);
     updatePillDisplay('to', toTz);
+
+    // Strip timezone from input so the parser uses the From pill instead
+    const currentInput = el.dateTimeInput.value.trim();
+    if (currentInput) {
+        const stripped = stripTimezoneFromInput(currentInput);
+        if (stripped !== currentInput) {
+            el.dateTimeInput.value = stripped;
+        }
+    }
 
     saveTimezonePreferences();
     triggerAutoConvert();
@@ -912,28 +957,19 @@ function handleConversion() {
             confidence = 'medium';
         }
 
-        // Show or hide confidence + contextual hint
+        // Show or hide confidence
         if (confidence === 'high') {
-            // When timezone is detected from input, hint that swap won't work with embedded tz
-            el.confidenceText.textContent = 'Tip: Enter time without timezone (e.g., "3:00 PM") to use the From picker';
-            el.confidenceText.classList.add('show');
-            el.confidenceText.classList.add('hint');
-        } else if (confidence === 'low' && !selectedFromTimezone) {
-            // Auto-detect, no user selection
-            const localCity = userTimezone.split('/').pop().replace(/_/g, ' ');
-            el.confidenceText.textContent = `Auto-detected: ${localCity} \u2014 select From timezone for other zones`;
-            el.confidenceText.classList.add('show');
-            el.confidenceText.classList.remove('hint');
+            el.confidenceText.classList.remove('show');
         } else if (confidence === 'low' || confidence === 'medium') {
+            const fromTzObj = timezones.find(tz => tz.name === sourceTimezone);
+            const fromLabel = fromTzObj ? `${fromTzObj.abbreviation} \u00B7 ${fromTzObj.city}` : sourceTimezone;
             const detail = parseResult.confidenceDetail || (confidence === 'medium'
-                ? 'Timezone inferred \u2014 verify the source timezone'
-                : 'No timezone in input \u2014 using your selected From timezone');
+                ? `Timezone inferred: ${fromLabel}`
+                : `No timezone in input \u2014 using ${selectedFromTimezone ? 'selected' : 'local'} timezone: ${fromLabel}`);
             el.confidenceText.textContent = detail;
             el.confidenceText.classList.add('show');
-            el.confidenceText.classList.remove('hint');
         } else {
             el.confidenceText.classList.remove('show');
-            el.confidenceText.classList.remove('hint');
         }
 
         // High confidence — auto-update From pill with detected timezone
