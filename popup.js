@@ -471,8 +471,15 @@ function updatePillDisplay(type, tzObj, overrideLine1, overrideLine2) {
     const line2El = type === 'from' ? el.fromLine2 : el.toLine2;
 
     if (!tzObj) {
-        line1El.textContent = 'Auto-detect';
-        line2El.innerHTML = '&nbsp;';
+        // Show user's local timezone info instead of generic "Auto-detect"
+        const localTz = timezones.find(tz => tz.name === userTimezone);
+        if (localTz) {
+            line1El.textContent = `${localTz.abbreviation} \u00B7 ${localTz.city}`;
+            line2El.textContent = localTz.offsetString;
+        } else {
+            line1El.textContent = userTimezone || 'Auto-detect';
+            line2El.innerHTML = '&nbsp;';
+        }
         return;
     }
 
@@ -1074,6 +1081,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupEventListeners();
 
     await loadTimezonePreferences();
+
+    // Set initial pill display (show local timezone if no preference loaded)
+    if (!selectedFromTimezone) updatePillDisplay('from', null);
+    if (!selectedToTimezone) updatePillDisplay('to', null);
 
     // Check if opened from context menu
     checkForContextMenuText();
