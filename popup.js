@@ -59,7 +59,7 @@ const COUNTRY_SEARCH_MAP = {
     'usa': ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu'],
     'united states': ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu'],
     'us': ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu'],
-    'india': ['Asia/Kolkata'],
+    'india': ['Asia/Kolkata', 'Asia/Calcutta'],
     'japan': ['Asia/Tokyo'],
     'china': ['Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Urumqi'],
     'uk': ['Europe/London'],
@@ -236,6 +236,12 @@ function detectUserTimezone() {
 
 const CITY_ALIASES = {
     'Asia/Kolkata': 'mumbai bombay delhi bangalore chennai hyderabad india calcutta',
+    'Asia/Calcutta': 'mumbai bombay delhi bangalore chennai hyderabad india kolkata ist',
+    'Europe/Kiev': 'ukraine kyiv',
+    'Asia/Saigon': 'vietnam ho chi minh hcmc',
+    'Asia/Rangoon': 'myanmar yangon burma',
+    'Pacific/Truk': 'chuuk micronesia',
+    'Pacific/Ponape': 'pohnpei micronesia',
     'Asia/Shanghai': 'beijing china shenzhen guangzhou',
     'America/New_York': 'nyc manhattan usa east coast',
     'America/Los_Angeles': 'la san francisco usa west coast hollywood',
@@ -289,6 +295,16 @@ const CITY_ALIASES = {
 function getCityAliases(zoneName) {
     return CITY_ALIASES[zoneName] || '';
 }
+
+// Modern display names for legacy IANA identifiers
+const CITY_DISPLAY_OVERRIDE = {
+    'Asia/Calcutta': 'Kolkata',
+    'Europe/Kiev': 'Kyiv',
+    'Asia/Saigon': 'Ho Chi Minh',
+    'Asia/Rangoon': 'Yangon',
+    'Pacific/Truk': 'Chuuk',
+    'Pacific/Ponape': 'Pohnpei',
+};
 
 // ============================================================
 // Region grouping
@@ -345,7 +361,7 @@ function generateAllTimezones() {
             const utcOffset = getTimezoneOffsetMinutes(zoneName);
             const abbreviation = getTimezoneAbbreviation(zoneName);
             const parts = zoneName.split('/');
-            const city = parts[parts.length - 1].replace(/_/g, ' ');
+            const city = CITY_DISPLAY_OVERRIDE[zoneName] || parts[parts.length - 1].replace(/_/g, ' ');
             const region = getRegionGroup(zoneName);
             const offsetStr = formatOffsetString(utcOffset);
 
@@ -767,6 +783,30 @@ function formatShortDateInTimezone(utcDate, ianaZone) {
     }).format(utcDate);
 }
 
+/**
+ * Compute day difference between source wall-clock and target display.
+ * Returns "" for same day, "+1 day" for next day, "-1 day" for previous day, etc.
+ */
+function getDayDiffLabel(utcDate, sourceTimezone, targetTimezone) {
+    try {
+        const srcDay = new Intl.DateTimeFormat('en-US', { timeZone: sourceTimezone, day: 'numeric', month: 'numeric', year: 'numeric' }).format(utcDate);
+        const tgtDay = new Intl.DateTimeFormat('en-US', { timeZone: targetTimezone, day: 'numeric', month: 'numeric', year: 'numeric' }).format(utcDate);
+        if (srcDay === tgtDay) return '';
+        // Parse MM/DD/YYYY to compare
+        const [sm, sd, sy] = srcDay.split('/').map(Number);
+        const [tm, td, ty] = tgtDay.split('/').map(Number);
+        const srcDate = new Date(sy, sm - 1, sd);
+        const tgtDate = new Date(ty, tm - 1, td);
+        const diffDays = Math.round((tgtDate - srcDate) / (24 * 60 * 60 * 1000));
+        if (diffDays === 0) return '';
+        if (diffDays === 1) return '+1 day';
+        if (diffDays === -1) return '-1 day';
+        return `${diffDays > 0 ? '+' : ''}${diffDays} days`;
+    } catch {
+        return '';
+    }
+}
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -845,9 +885,23 @@ function handleConversion() {
             }
         }
 
-        // Look up display objects
+        // Look up display objects — try exact match first, then partial match on city
         const sourceTimezoneObj = timezones.find(tz => tz.name === sourceTimezone);
-        const targetTimezoneObj = timezones.find(tz => tz.name === targetTimezone);
+        let targetTimezoneObj = timezones.find(tz => tz.name === targetTimezone);
+        // Fallback: if target not found by exact name, try building info dynamically
+        if (!targetTimezoneObj && targetTimezone) {
+            try {
+                const { displayName, longName } = buildTimezoneInfo(targetTimezone);
+                const utcOff = getTimezoneOffsetMinutes(targetTimezone);
+                const abbr = getTimezoneAbbreviation(targetTimezone);
+                const city = targetTimezone.split('/').pop().replace(/_/g, ' ');
+                targetTimezoneObj = {
+                    name: targetTimezone, city, displayName, longName,
+                    abbreviation: abbr, offsetString: formatOffsetString(utcOff),
+                    utcOffset: utcOff, region: getRegionGroup(targetTimezone)
+                };
+            } catch { /* ignore */ }
+        }
         const targetDisplay = targetTimezoneObj ? targetTimezoneObj.displayName : targetTimezone;
 
         // Source display — use explicit offset if provided
@@ -920,9 +974,10 @@ function handleConversion() {
                 : '';
 
             const targetTzName = targetTimezoneObj ? `${targetTimezoneObj.abbreviation} \u00B7 ${targetTimezoneObj.longName}` : targetTimezone;
+            const dayDiff = getDayDiffLabel(utcDate, sourceTimezone, targetTimezone);
 
             el.resultContent.innerHTML = `
-                <div class="result-converted-time">${convertedTime}</div>
+                <div class="result-converted-time">${convertedTime}${dayDiff ? `<span class="day-diff">${dayDiff}</span>` : ''}</div>
                 ${singleDateText ? `<div class="result-date">${escapeHtml(singleDateText)}</div>` : ''}
                 <div class="result-tz-name">${escapeHtml(targetTzName)}</div>
                 <div class="result-original">
